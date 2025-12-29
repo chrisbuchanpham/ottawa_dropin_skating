@@ -721,4 +721,13 @@ document.addEventListener("DOMContentLoaded", () => {
       setDefaultDates();
     });
   }
+  const clearEndDate = document.getElementById("clear-end-date");
+  if (clearEndDate) {
+    clearEndDate.addEventListener("click", () => {
+      const endDate = document.getElementById("end-date");
+      if (endDate) {
+        endDate.value = "";
+      }
+    });
+  }
 });
