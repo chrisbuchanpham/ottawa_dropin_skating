@@ -1,4 +1,4 @@
-const DATA_URL = "https://data.ottrec.ca/export/latest.json";
+const DATA_URL = "./data/latest.json";
 const EXCLUDED_TERMS = ["hockey", "50+", "50 +", "50-plus", "50 plus", "50plus"];
 const LATEST_START_TIME = "22:00";
 const DEFAULT_KEYWORDS = ["drop-in skating", "family skating", "public skating"];

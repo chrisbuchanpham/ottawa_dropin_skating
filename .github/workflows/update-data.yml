@@ -1,0 +1,30 @@
+name: Update drop-in data
+
+on:
+  schedule:
+    - cron: "15 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch latest data
+        run: |
+          mkdir -p data
+          curl -L -o data/latest.json https://data.ottrec.ca/export/latest.json
+
+      - name: Commit if changed
+        run: |
+          if git diff --quiet; then
+            echo "No changes."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/latest.json
+          git commit -m "Update drop-in data"
+          git push
