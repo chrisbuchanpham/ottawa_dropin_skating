@@ -4,6 +4,14 @@ title: Ottawa Drop-in Skating
 ---
 
 <style>
+  .wrapper {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 24px;
+  }
+  .page-header {
+    max-width: none !important;
+  }
   .controls {
     margin: 1rem 0;
     padding: 1rem;
@@ -46,7 +54,7 @@ title: Ottawa Drop-in Skating
   }
   .results-table {
     width: 100%;
-    table-layout: fixed;
+    table-layout: auto;
     border-collapse: collapse;
     margin-bottom: 1.5rem;
   }
@@ -60,6 +68,12 @@ title: Ottawa Drop-in Skating
   .results-table th {
     background: #f6f8fa;
     font-weight: 600;
+  }
+  .results-table th:last-child,
+  .results-table td:last-child {
+    width: 34%;
+    word-break: normal;
+    overflow-wrap: anywhere;
   }
   .neighbourhood-title {
     margin-top: 1.5rem;

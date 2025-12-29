@@ -174,6 +174,27 @@ function activityExcluded(haystack) {
   return EXCLUDED_TERMS.some((term) => haystack.includes(term));
 }
 
+function deriveReservationRequired(activity) {
+  const haystack = normalizeText(
+    [
+      activity.rawActivity || "",
+      activity.rawScheduleGroup || "",
+      activity.rawSchedule || "",
+      activity.name || "",
+    ].join(" ")
+  );
+  if (haystack.includes("reservation not required") || haystack.includes("reservations not required")) {
+    return false;
+  }
+  if (haystack.includes("reservation required") || haystack.includes("reservations required")) {
+    return true;
+  }
+  if ((activity.reservationLinks || []).length > 0) {
+    return true;
+  }
+  return Boolean(activity.reservationRequired);
+}
+
 function activityMatches(activity, keywords) {
   const haystack = normalizeText(
     [
@@ -265,7 +286,7 @@ function buildRows(dates, data, keywords) {
         facility_name: facility.name || "",
         facility_address: facility.address || "",
         facility_url: activity.facilityUrl || "",
-        reservation_required: Boolean(activity.reservationRequired),
+        reservation_required: deriveReservationRequired(activity),
         reservation_links: (activity.reservationLinks || []).join(";"),
         facility_latitude: facility.latitude ?? "",
         facility_longitude: facility.longitude ?? "",
@@ -365,10 +386,12 @@ function renderTable(rows, orderMap, container) {
     const table = document.createElement("table");
     table.className = "results-table";
     const colgroup = document.createElement("colgroup");
-    const widths = ["110px", "70px", "70px", "120px", "180px", "220px", "auto"];
+    const widths = ["110px", "70px", "70px", "120px", "160px", "200px", ""];
     widths.forEach((width) => {
       const col = document.createElement("col");
-      col.style.width = width;
+      if (width) {
+        col.style.width = width;
+      }
       colgroup.appendChild(col);
     });
     table.appendChild(colgroup);
@@ -420,16 +443,27 @@ function renderTable(rows, orderMap, container) {
       }
       tr.appendChild(reservationTd);
 
-      const tailCells = [
-        row.activity_name,
-        row.facility_name,
-        row.facility_address,
-      ];
-      for (const value of tailCells) {
-        const td = document.createElement("td");
-        td.textContent = value;
-        tr.appendChild(td);
+      const activityTd = document.createElement("td");
+      activityTd.textContent = row.activity_name;
+      tr.appendChild(activityTd);
+
+      const facilityTd = document.createElement("td");
+      facilityTd.textContent = row.facility_name;
+      tr.appendChild(facilityTd);
+
+      const addressTd = document.createElement("td");
+      if (row.facility_address) {
+        const link = document.createElement("a");
+        const destination = encodeURIComponent(row.facility_address);
+        link.href = `https://www.google.com/maps/dir/?api=1&origin=Current+Location&destination=${destination}`;
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = row.facility_address;
+        addressTd.appendChild(link);
+      } else {
+        addressTd.textContent = "";
       }
+      tr.appendChild(addressTd);
 
       tbody.appendChild(tr);
     }
