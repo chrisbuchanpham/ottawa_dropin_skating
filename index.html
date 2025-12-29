@@ -114,6 +114,10 @@ title: Ottawa Drop-in Skating
     margin-top: 0.4rem;
     font-weight: 500;
   }
+  .hint {
+    font-weight: 400;
+    color: var(--muted);
+  }
   .controls button {
     margin-top: 0.75rem;
     padding: 0.5rem 0.9rem;
@@ -205,7 +209,7 @@ title: Ottawa Drop-in Skating
     <label><input type="radio" name="activity-filter" value="hockey" /> Hockey</label>
   </div>
 
-  <label>Time of day</label>
+  <label>Time of day <span class="hint">(all timeslots by default)</span></label>
   <div class="time-filters">
     <label><input type="checkbox" name="time-filter" value="morning" /> Morning (before noon)</label>
     <label><input type="checkbox" name="time-filter" value="afternoon" /> Afternoon (noon - 6pm)</label>
