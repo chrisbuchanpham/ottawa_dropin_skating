@@ -96,6 +96,15 @@ title: Ottawa Drop-in Skating
     background: var(--card);
     color: var(--text);
   }
+  .activity-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 1.2rem;
+  }
+  .activity-filter label {
+    margin-top: 0.4rem;
+    font-weight: 500;
+  }
   .time-filters {
     display: flex;
     flex-wrap: wrap;
@@ -190,8 +199,11 @@ title: Ottawa Drop-in Skating
   <label for="end-date">End date (optional)</label>
   <input id="end-date" type="date" />
 
-  <label for="keywords">Keywords (comma-separated)</label>
-  <input id="keywords" type="text" />
+  <label>Activity type</label>
+  <div class="activity-filter">
+    <label><input type="radio" name="activity-filter" value="skating" checked /> Skating</label>
+    <label><input type="radio" name="activity-filter" value="hockey" /> Hockey</label>
+  </div>
 
   <label>Time of day</label>
   <div class="time-filters">

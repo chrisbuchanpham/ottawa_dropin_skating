@@ -1,6 +1,5 @@
 const DATA_URL = "./data/latest.json";
 const EXCLUDED_TERMS = [
-  "hockey",
   "ringette",
   "figure skate",
   "figure skating",
@@ -11,7 +10,14 @@ const EXCLUDED_TERMS = [
   "50plus",
 ];
 const LATEST_START_TIME = "22:00";
-const DEFAULT_KEYWORDS = ["drop-in skating", "family skating", "public skating", "adult skate"];
+const HOCKEY_TERMS = [
+  "hockey",
+  "pick-up hockey",
+  "pickup hockey",
+  "stick and puck",
+  "stick & puck",
+  "shinny",
+];
 
 const NEIGHBOURHOOD_KEYWORDS = [
   ["Carp", ["carp", "w. erskine johnston"]],
@@ -132,13 +138,6 @@ function normalizeMatchText(value) {
     .toLowerCase();
 }
 
-function normalizeKeywords(raw) {
-  return raw
-    .split(",")
-    .map((item) => item.trim().toLowerCase().replace(/skating/g, "skate"))
-    .filter(Boolean);
-}
-
 function parseISODateToUTC(dateStr) {
   if (!dateStr) return null;
   const parts = dateStr.split("-").map((value) => Number(value));
@@ -226,7 +225,7 @@ function deriveReservationRequired(activity, facility) {
   return false;
 }
 
-function activityMatches(activity, keywords) {
+function activityMatchesCategory(activity, category) {
   const haystack = normalizeText(
     [
       activity.name || "",
@@ -238,17 +237,14 @@ function activityMatches(activity, keywords) {
   if (activityExcluded(haystack)) {
     return false;
   }
-  for (const keyword of keywords) {
-    if (keyword.includes(" ")) {
-      const parts = keyword.split(/\s+/).filter(Boolean);
-      if (parts.every((part) => haystack.includes(part))) {
-        return true;
-      }
-    } else if (haystack.includes(keyword)) {
-      return true;
-    }
+  const hasHockey = HOCKEY_TERMS.some((term) => haystack.includes(term));
+  if (category === "hockey") {
+    return hasHockey;
   }
-  return false;
+  if (category === "skating") {
+    return haystack.includes("skate") && !hasHockey;
+  }
+  return true;
 }
 
 function activityOnDate(activity, dateObj) {
@@ -286,7 +282,7 @@ function iterDates(startDate, endDate) {
   return dates;
 }
 
-function buildRows(dates, data, keywords) {
+function buildRows(dates, data, category) {
   const facilities = {};
   for (const facility of data.facility || []) {
     facilities[facility.url] = facility;
@@ -302,7 +298,7 @@ function buildRows(dates, data, keywords) {
       if (!activityOnDate(activity, dateObj)) {
         continue;
       }
-      if (!activityMatches(activity, keywords)) {
+      if (!activityMatchesCategory(activity, category)) {
         continue;
       }
       const facility = facilities[activity.facilityUrl] || {};
@@ -572,7 +568,7 @@ function escapeCsvRow(row, fieldnames) {
 async function runSearch() {
   const startDate = document.getElementById("start-date").value;
   const endDate = document.getElementById("end-date").value;
-  const keywordsInput = document.getElementById("keywords").value;
+  const activityFilter = document.querySelector('input[name="activity-filter"]:checked');
   const timeFilters = Array.from(document.querySelectorAll('input[name="time-filter"]:checked')).map(
     (input) => input.value
   );
@@ -589,11 +585,7 @@ async function runSearch() {
     status.textContent = "Select a start date.";
     return;
   }
-  const keywords = normalizeKeywords(keywordsInput);
-  if (!keywords.length) {
-    status.textContent = "Enter at least one keyword.";
-    return;
-  }
+  const category = activityFilter ? activityFilter.value : "skating";
 
   try {
     const response = await fetch(DATA_URL);
@@ -601,7 +593,7 @@ async function runSearch() {
       throw new Error(`Fetch failed: ${response.status}`);
     }
     const data = await response.json();
-    const rows = dedupeRows(buildRows(dates, data, keywords)).filter((row) =>
+    const rows = dedupeRows(buildRows(dates, data, category)).filter((row) =>
       matchesTimeOfDay(row, timeFilters)
     );
     const orderMap = buildNeighbourhoodOrder(rows, data.facility || []);
@@ -629,10 +621,6 @@ function setDefaultDates() {
   document.getElementById("start-date").value = iso;
 }
 
-function setDefaultKeywords() {
-  document.getElementById("keywords").value = DEFAULT_KEYWORDS.join(", ");
-}
-
 function applyTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
   localStorage.setItem("theme", theme);
@@ -656,6 +644,5 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   setDefaultDates();
-  setDefaultKeywords();
   document.getElementById("search-button").addEventListener("click", runSearch);
 });
