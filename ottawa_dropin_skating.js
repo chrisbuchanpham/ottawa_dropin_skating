@@ -183,7 +183,15 @@ function deriveReservationRequired(activity) {
       activity.name || "",
     ].join(" ")
   );
-  if (haystack.includes("reservation not required") || haystack.includes("reservations not required")) {
+  if (
+    haystack.includes("reservation not required") ||
+    haystack.includes("reservations not required") ||
+    haystack.includes("no reservation required") ||
+    haystack.includes("no reservations required") ||
+    haystack.includes("no reservation") ||
+    haystack.includes("no reservations") ||
+    haystack.includes("walk-in")
+  ) {
     return false;
   }
   if (haystack.includes("reservation required") || haystack.includes("reservations required")) {
@@ -445,7 +453,7 @@ function renderTable(rows, orderMap, container) {
       if (row.facility_address) {
         const link = document.createElement("a");
         const destination = encodeURIComponent(row.facility_address);
-        link.href = `https://www.google.com/maps/dir/?api=1&origin=Current+Location&destination=${destination}`;
+        link.href = `https://www.google.com/maps/search/?api=1&query=${destination}`;
         link.target = "_blank";
         link.rel = "noopener";
         link.textContent = row.facility_address;
