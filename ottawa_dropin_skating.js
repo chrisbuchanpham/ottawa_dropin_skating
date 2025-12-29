@@ -1,7 +1,7 @@
 const DATA_URL = "./data/latest.json";
 const EXCLUDED_TERMS = ["hockey", "50+", "50 +", "50-plus", "50 plus", "50plus"];
 const LATEST_START_TIME = "22:00";
-const DEFAULT_KEYWORDS = ["drop-in skating", "family skating", "public skating"];
+const DEFAULT_KEYWORDS = ["drop-in skating", "family skating", "public skating", "adult skate"];
 
 const NEIGHBOURHOOD_KEYWORDS = [
   ["Carp", ["carp", "w. erskine johnston"]],
@@ -368,6 +368,7 @@ function renderTable(rows, orderMap, container) {
         <th>Date</th>
         <th>Start</th>
         <th>End</th>
+        <th>Reservation</th>
         <th>Activity</th>
         <th>Facility</th>
         <th>Address</th>
@@ -378,14 +379,48 @@ function renderTable(rows, orderMap, container) {
     const tbody = document.createElement("tbody");
     for (const row of grouped[neighbourhood]) {
       const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${row.date}</td>
-        <td>${row.start_time}</td>
-        <td>${row.end_time}</td>
-        <td>${row.activity_name}</td>
-        <td>${row.facility_name}</td>
-        <td>${row.facility_address}</td>
-      `;
+
+      const cells = [
+        row.date,
+        row.start_time,
+        row.end_time,
+      ];
+      for (const value of cells) {
+        const td = document.createElement("td");
+        td.textContent = value;
+        tr.appendChild(td);
+      }
+
+      const reservationTd = document.createElement("td");
+      if (row.reservation_required) {
+        const links = row.reservation_links ? row.reservation_links.split(";") : [];
+        const firstLink = links.find((value) => value.trim()) || "";
+        if (firstLink) {
+          const a = document.createElement("a");
+          a.href = firstLink;
+          a.target = "_blank";
+          a.rel = "noopener";
+          a.textContent = "Required";
+          reservationTd.appendChild(a);
+        } else {
+          reservationTd.textContent = "Required";
+        }
+      } else {
+        reservationTd.textContent = "No";
+      }
+      tr.appendChild(reservationTd);
+
+      const tailCells = [
+        row.activity_name,
+        row.facility_name,
+        row.facility_address,
+      ];
+      for (const value of tailCells) {
+        const td = document.createElement("td");
+        td.textContent = value;
+        tr.appendChild(td);
+      }
+
       tbody.appendChild(tr);
     }
     table.appendChild(tbody);
