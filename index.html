@@ -16,12 +16,18 @@ title: Ottawa Drop-in Skating
   header {
     width: auto !important;
     float: none !important;
+    position: static !important;
   }
   section {
     float: none !important;
     width: auto !important;
     max-width: none !important;
     margin-left: 0;
+  }
+  footer {
+    position: static !important;
+    float: none !important;
+    clear: both;
   }
   .controls {
     margin: 1rem 0;
@@ -65,7 +71,7 @@ title: Ottawa Drop-in Skating
   }
   .results-table {
     width: 100%;
-    table-layout: auto;
+    table-layout: fixed;
     border-collapse: collapse;
     margin-bottom: 1.5rem;
   }
@@ -80,14 +86,35 @@ title: Ottawa Drop-in Skating
     background: #f6f8fa;
     font-weight: 600;
   }
-  .results-table th:last-child,
-  .results-table td:last-child {
-    width: 34%;
-    overflow-wrap: anywhere;
-  }
-  .results-table th:nth-child(-n + 4),
-  .results-table td:nth-child(-n + 4) {
+  .results-table th:nth-child(1),
+  .results-table td:nth-child(1) {
+    width: 110px;
     white-space: nowrap;
+  }
+  .results-table th:nth-child(2),
+  .results-table td:nth-child(2),
+  .results-table th:nth-child(3),
+  .results-table td:nth-child(3) {
+    width: 70px;
+    white-space: nowrap;
+  }
+  .results-table th:nth-child(4),
+  .results-table td:nth-child(4) {
+    width: 120px;
+    white-space: nowrap;
+  }
+  .results-table th:nth-child(5),
+  .results-table td:nth-child(5) {
+    width: 180px;
+  }
+  .results-table th:nth-child(6),
+  .results-table td:nth-child(6) {
+    width: 220px;
+  }
+  .results-table th:nth-child(7),
+  .results-table td:nth-child(7) {
+    width: auto;
+    overflow-wrap: anywhere;
   }
   .neighbourhood-title {
     margin-top: 1.5rem;
