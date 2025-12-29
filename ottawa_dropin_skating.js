@@ -383,8 +383,6 @@ function renderTable(rows, orderMap, container) {
     heading.className = "neighbourhood-title";
     container.appendChild(heading);
 
-    const wrapper = document.createElement("div");
-    wrapper.className = "results-scroll";
     const table = document.createElement("table");
     table.className = "results-table";
     const colgroup = document.createElement("colgroup");
@@ -470,8 +468,7 @@ function renderTable(rows, orderMap, container) {
       tbody.appendChild(tr);
     }
     table.appendChild(tbody);
-    wrapper.appendChild(table);
-    container.appendChild(wrapper);
+    container.appendChild(table);
   }
 }
 
