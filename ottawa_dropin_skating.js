@@ -359,9 +359,19 @@ function renderTable(rows, orderMap, container) {
   for (const neighbourhood of neighbourhoods) {
     const heading = document.createElement("h3");
     heading.textContent = `Neighbourhood: ${neighbourhood}`;
+    heading.className = "neighbourhood-title";
     container.appendChild(heading);
 
     const table = document.createElement("table");
+    table.className = "results-table";
+    const colgroup = document.createElement("colgroup");
+    const widths = ["110px", "70px", "70px", "120px", "180px", "220px", "auto"];
+    widths.forEach((width) => {
+      const col = document.createElement("col");
+      col.style.width = width;
+      colgroup.appendChild(col);
+    });
+    table.appendChild(colgroup);
     const thead = document.createElement("thead");
     thead.innerHTML = `
       <tr>

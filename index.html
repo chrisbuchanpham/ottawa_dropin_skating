@@ -1,103 +1,89 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Ottawa Drop-in Skating</title>
-    <style>
-      :root {
-        color-scheme: light;
-      }
-      body {
-        font-family: "Georgia", "Times New Roman", serif;
-        margin: 24px;
-        color: #1c1c1c;
-        background: linear-gradient(140deg, #f2f4f7, #e9edf2);
-      }
-      h1 {
-        margin: 0 0 8px;
-      }
-      .card {
-        background: #fff;
-        border-radius: 12px;
-        padding: 16px;
-        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
-        margin-bottom: 16px;
-      }
-      label {
-        display: block;
-        margin: 12px 0 6px;
-        font-weight: bold;
-      }
-      input[type="date"],
-      input[type="text"] {
-        width: 100%;
-        padding: 8px;
-        border-radius: 6px;
-        border: 1px solid #c7cdd6;
-      }
-      button {
-        margin-top: 12px;
-        padding: 10px 16px;
-        background: #1f4e79;
-        color: #fff;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-      }
-      button:hover {
-        background: #173957;
-      }
-      #status {
-        margin-top: 8px;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 24px;
-      }
-      th,
-      td {
-        border-bottom: 1px solid #e0e5ec;
-        padding: 6px 8px;
-        text-align: left;
-        vertical-align: top;
-        font-size: 0.95rem;
-      }
-      th {
-        background: #f7f9fc;
-      }
-      #download {
-        display: inline-block;
-        margin-top: 8px;
-        color: #1f4e79;
-        text-decoration: none;
-        font-weight: bold;
-      }
-      #download:hover {
-        text-decoration: underline;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>Ottawa Drop-in Skating</h1>
-    <div class="card">
-      <label for="start-date">Start date</label>
-      <input id="start-date" type="date" />
+---
+layout: default
+title: Ottawa Drop-in Skating
+---
 
-      <label for="end-date">End date (optional)</label>
-      <input id="end-date" type="date" />
+<style>
+  .controls {
+    margin: 1rem 0;
+    padding: 1rem;
+    border: 1px solid #e1e4e8;
+    border-radius: 8px;
+    background: #fff;
+  }
+  .controls label {
+    display: block;
+    margin-top: 0.75rem;
+    font-weight: 600;
+  }
+  .controls input[type="date"],
+  .controls input[type="text"] {
+    width: 100%;
+    max-width: 420px;
+    padding: 0.4rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #c7ced6;
+  }
+  .controls button {
+    margin-top: 0.75rem;
+    padding: 0.5rem 0.9rem;
+    border-radius: 4px;
+    border: none;
+    background: #2b5b8c;
+    color: #fff;
+    cursor: pointer;
+  }
+  .controls button:hover {
+    background: #244b72;
+  }
+  #status {
+    margin-top: 0.5rem;
+  }
+  #download {
+    display: inline-block;
+    margin-top: 0.5rem;
+    font-weight: 600;
+  }
+  .results-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    margin-bottom: 1.5rem;
+  }
+  .results-table th,
+  .results-table td {
+    border-bottom: 1px solid #e1e4e8;
+    padding: 0.35rem 0.5rem;
+    vertical-align: top;
+    word-break: break-word;
+  }
+  .results-table th {
+    background: #f6f8fa;
+    font-weight: 600;
+  }
+  .neighbourhood-title {
+    margin-top: 1.5rem;
+  }
+</style>
 
-      <label for="keywords">Keywords (comma-separated)</label>
-      <input id="keywords" type="text" />
+<h1>Ottawa Drop-in Skating</h1>
+<p>Search drop-in skating sessions by date and neighbourhood.</p>
 
-      <button id="search-button">Search</button>
-      <div id="status"></div>
-      <a id="download" href="#" style="display: none">Download CSV</a>
-    </div>
+<div class="controls">
+  <label for="start-date">Start date</label>
+  <input id="start-date" type="date" />
 
-    <div id="results" class="card"></div>
+  <label for="end-date">End date (optional)</label>
+  <input id="end-date" type="date" />
 
-    <script src="ottawa_dropin_skating.js"></script>
-  </body>
-</html>
+  <label for="keywords">Keywords (comma-separated)</label>
+  <input id="keywords" type="text" />
+
+  <button id="search-button">Search</button>
+  <div id="status"></div>
+  <a id="download" href="#" style="display: none">Download CSV</a>
+</div>
+
+<div id="results"></div>
+
+<script src="ottawa_dropin_skating.js"></script>
