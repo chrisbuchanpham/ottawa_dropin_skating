@@ -565,6 +565,77 @@ function escapeCsvRow(row, fieldnames) {
     .join(",");
 }
 
+function updateDownloadLink(rows, orderMap, dates, downloadLink) {
+  const csv = buildCsv(rows, orderMap);
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  downloadLink.href = url;
+  downloadLink.download = `ottawa_dropin_skating_${dates[0].toISOString().slice(0, 10)}.csv`;
+  downloadLink.style.display = "inline-block";
+}
+
+function renderNeighbourhoodFilter(rows, orderMap, container, onSelect) {
+  const counts = {};
+  rows.forEach((row) => {
+    counts[row.neighbourhood] = (counts[row.neighbourhood] || 0) + 1;
+  });
+  const neighbourhoods = Object.keys(counts).sort((a, b) => {
+    const orderA = orderMap[a] ?? 9999;
+    const orderB = orderMap[b] ?? 9999;
+    return orderA === orderB ? a.localeCompare(b) : orderA - orderB;
+  });
+  if (!neighbourhoods.length) {
+    container.style.display = "none";
+    return;
+  }
+  container.style.display = "block";
+  container.innerHTML = "";
+
+  const title = document.createElement("div");
+  title.className = "filter-title";
+  title.textContent = "Filter by Neighbourhood:";
+  container.appendChild(title);
+
+  const list = document.createElement("div");
+  list.className = "neighbourhood-filter-list";
+  container.appendChild(list);
+
+  const buttons = [];
+  function addButton(label, count, value) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "filter-chip";
+    button.dataset.value = value;
+    button.textContent = `${label} (${count})`;
+    list.appendChild(button);
+    buttons.push(button);
+    return button;
+  }
+
+  addButton("All", rows.length, "__all__").classList.add("active");
+  neighbourhoods.forEach((name) => addButton(name, counts[name], name));
+
+  const setActive = (value) => {
+    buttons.forEach((button) => {
+      button.classList.toggle("active", button.dataset.value === value);
+    });
+    if (value === "__all__") {
+      onSelect(rows);
+    } else {
+      onSelect(rows.filter((row) => row.neighbourhood === value));
+    }
+  };
+
+  list.addEventListener("click", (event) => {
+    const target = event.target;
+    if (target instanceof HTMLElement && target.dataset.value) {
+      setActive(target.dataset.value);
+    }
+  });
+
+  setActive("__all__");
+}
+
 async function runSearch() {
   const startDate = document.getElementById("start-date").value;
   const endDate = document.getElementById("end-date").value;
@@ -575,6 +646,7 @@ async function runSearch() {
   const status = document.getElementById("status");
   const tableContainer = document.getElementById("results");
   const downloadLink = document.getElementById("download");
+  const neighbourhoodFilter = document.getElementById("neighbourhood-filter");
 
   status.textContent = "Loading data...";
   tableContainer.innerHTML = "";
@@ -599,15 +671,13 @@ async function runSearch() {
     const orderMap = buildNeighbourhoodOrder(rows, data.facility || []);
     sortRows(rows, orderMap);
 
-    const csv = buildCsv(rows, orderMap);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    downloadLink.href = url;
-    downloadLink.download = `ottawa_dropin_skating_${dates[0].toISOString().slice(0, 10)}.csv`;
-    downloadLink.style.display = "inline-block";
+    const applySelection = (filteredRows) => {
+      status.textContent = `Found ${filteredRows.length} sessions.`;
+      renderTable(filteredRows, orderMap, tableContainer);
+      updateDownloadLink(filteredRows, orderMap, dates, downloadLink);
+    };
 
-    status.textContent = `Found ${rows.length} sessions.`;
-    renderTable(rows, orderMap, tableContainer);
+    renderNeighbourhoodFilter(rows, orderMap, neighbourhoodFilter, applySelection);
   } catch (error) {
     status.textContent = `Error: ${error.message}`;
   }

@@ -145,6 +145,29 @@ title: Ottawa Drop-in Skating
   .controls button:hover {
     background: var(--link-hover);
   }
+  .filter-title {
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+  }
+  .neighbourhood-filter-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .filter-chip {
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  .filter-chip.active {
+    background: var(--link);
+    color: var(--card);
+    border-color: var(--link);
+  }
   #status {
     margin-top: 0.5rem;
   }
@@ -238,6 +261,8 @@ title: Ottawa Drop-in Skating
   <div id="status"></div>
   <a id="download" href="#" style="display: none">Download CSV</a>
 </div>
+
+<div id="neighbourhood-filter" class="controls" style="display: none"></div>
 
 <div id="results"></div>
 
