@@ -96,6 +96,15 @@ title: Ottawa Drop-in Skating
     background: var(--card);
     color: var(--text);
   }
+  .time-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 1.2rem;
+  }
+  .time-filters label {
+    margin-top: 0.4rem;
+    font-weight: 500;
+  }
   .controls button {
     margin-top: 0.75rem;
     padding: 0.5rem 0.9rem;
@@ -183,6 +192,13 @@ title: Ottawa Drop-in Skating
 
   <label for="keywords">Keywords (comma-separated)</label>
   <input id="keywords" type="text" />
+
+  <label>Time of day</label>
+  <div class="time-filters">
+    <label><input type="checkbox" name="time-filter" value="morning" /> Morning (before noon)</label>
+    <label><input type="checkbox" name="time-filter" value="afternoon" /> Afternoon (noon - 6pm)</label>
+    <label><input type="checkbox" name="time-filter" value="evening" /> Evening (after 6pm)</label>
+  </div>
 
   <button id="search-button">Search</button>
   <div id="status"></div>

@@ -106,6 +106,11 @@ const FSA_NEIGHBOURHOOD = {
   K4P: "Greely",
 };
 
+const FACILITY_RESERVATION_OVERRIDES = {
+  "bob macquarrie recreation complex": false,
+  "bob-macquarrie-recreation-complex-orleans": false,
+};
+
 function normalizeText(value) {
   return value.toLowerCase().replace(/skating/g, "skate");
 }
@@ -174,7 +179,15 @@ function activityExcluded(haystack) {
   return EXCLUDED_TERMS.some((term) => haystack.includes(term));
 }
 
-function deriveReservationRequired(activity) {
+function deriveReservationRequired(activity, facility) {
+  const nameKey = normalizeMatchText((facility && facility.name) || "");
+  const urlKey = normalizeMatchText(activity.facilityUrl || "");
+  for (const [key, value] of Object.entries(FACILITY_RESERVATION_OVERRIDES)) {
+    if (nameKey.includes(key) || urlKey.includes(key)) {
+      return value;
+    }
+  }
+
   const haystack = normalizeText(
     [
       activity.rawActivity || "",
@@ -200,7 +213,7 @@ function deriveReservationRequired(activity) {
   if ((activity.reservationLinks || []).length > 0) {
     return true;
   }
-  return Boolean(activity.reservationRequired);
+  return false;
 }
 
 function activityMatches(activity, keywords) {
@@ -294,7 +307,7 @@ function buildRows(dates, data, keywords) {
         facility_name: facility.name || "",
         facility_address: facility.address || "",
         facility_url: activity.facilityUrl || "",
-        reservation_required: deriveReservationRequired(activity),
+        reservation_required: deriveReservationRequired(activity, facility),
         reservation_links: (activity.reservationLinks || []).join(";"),
         facility_latitude: facility.latitude ?? "",
         facility_longitude: facility.longitude ?? "",
@@ -369,6 +382,33 @@ function sortRows(rows, orderMap) {
     if (a.facility_name !== b.facility_name) return a.facility_name.localeCompare(b.facility_name);
     return a.activity_name.localeCompare(b.activity_name);
   });
+}
+
+function parseHour(startTime) {
+  if (!startTime) return null;
+  const parts = startTime.split(":").map((value) => Number(value));
+  if (parts.length < 2 || parts.some((value) => Number.isNaN(value))) {
+    return null;
+  }
+  return parts[0];
+}
+
+function matchesTimeOfDay(row, filters) {
+  if (!filters.length) {
+    return true;
+  }
+  const hour = parseHour(row.start_time);
+  if (hour === null) {
+    return false;
+  }
+  const isMorning = hour < 12;
+  const isAfternoon = hour >= 12 && hour < 18;
+  const isEvening = hour >= 18;
+  return (
+    (filters.includes("morning") && isMorning) ||
+    (filters.includes("afternoon") && isAfternoon) ||
+    (filters.includes("evening") && isEvening)
+  );
 }
 
 function renderTable(rows, orderMap, container) {
@@ -523,6 +563,9 @@ async function runSearch() {
   const startDate = document.getElementById("start-date").value;
   const endDate = document.getElementById("end-date").value;
   const keywordsInput = document.getElementById("keywords").value;
+  const timeFilters = Array.from(document.querySelectorAll('input[name="time-filter"]:checked')).map(
+    (input) => input.value
+  );
   const status = document.getElementById("status");
   const tableContainer = document.getElementById("results");
   const downloadLink = document.getElementById("download");
@@ -548,7 +591,9 @@ async function runSearch() {
       throw new Error(`Fetch failed: ${response.status}`);
     }
     const data = await response.json();
-    const rows = dedupeRows(buildRows(dates, data, keywords));
+    const rows = dedupeRows(buildRows(dates, data, keywords)).filter((row) =>
+      matchesTimeOfDay(row, timeFilters)
+    );
     const orderMap = buildNeighbourhoodOrder(rows, data.facility || []);
     sortRows(rows, orderMap);
 
