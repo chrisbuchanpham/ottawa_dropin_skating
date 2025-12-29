@@ -86,6 +86,21 @@ title: Ottawa Drop-in Skating
     margin-top: 0.75rem;
     font-weight: 600;
   }
+  .date-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+  .controls .secondary-button {
+    margin-top: 0;
+    padding: 0.35rem 0.7rem;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    cursor: pointer;
+  }
   .controls input[type="date"],
   .controls input[type="text"] {
     width: 100%;
@@ -198,7 +213,10 @@ title: Ottawa Drop-in Skating
 
 <div class="controls">
   <label for="start-date">Start date</label>
-  <input id="start-date" type="date" />
+  <div class="date-row">
+    <input id="start-date" type="date" />
+    <button id="today-button" class="secondary-button" type="button">Today</button>
+  </div>
 
   <label for="end-date">End date (optional)</label>
   <input id="end-date" type="date" />

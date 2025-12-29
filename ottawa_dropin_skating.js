@@ -645,4 +645,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   setDefaultDates();
   document.getElementById("search-button").addEventListener("click", runSearch);
+  const todayButton = document.getElementById("today-button");
+  if (todayButton) {
+    todayButton.addEventListener("click", () => {
+      setDefaultDates();
+    });
+  }
 });
