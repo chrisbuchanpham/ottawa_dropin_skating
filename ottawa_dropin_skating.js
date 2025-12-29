@@ -385,16 +385,6 @@ function renderTable(rows, orderMap, container) {
 
     const table = document.createElement("table");
     table.className = "results-table";
-    const colgroup = document.createElement("colgroup");
-    const widths = ["110px", "70px", "70px", "120px", "160px", "200px", ""];
-    widths.forEach((width) => {
-      const col = document.createElement("col");
-      if (width) {
-        col.style.width = width;
-      }
-      colgroup.appendChild(col);
-    });
-    table.appendChild(colgroup);
     const thead = document.createElement("thead");
     thead.innerHTML = `
       <tr>
