@@ -14,11 +14,15 @@ title: Ottawa Drop-in Skating
     max-width: none !important;
   }
   header {
-    display: none !important;
+    display: block !important;
+    width: 100% !important;
+    float: none !important;
+    position: static !important;
+    margin: 0 0 1rem 0 !important;
   }
   section {
     float: none !important;
-    width: auto !important;
+    width: 100% !important;
     max-width: none !important;
     margin-left: 0;
   }
@@ -27,12 +31,55 @@ title: Ottawa Drop-in Skating
     float: none !important;
     clear: both;
   }
+  :root {
+    --bg: #f7f8fa;
+    --text: #1e1f22;
+    --muted: #5b6470;
+    --card: #ffffff;
+    --border: #e1e4e8;
+    --link: #2b5b8c;
+    --link-hover: #244b72;
+    --table-head: #f6f8fa;
+  }
+  [data-theme="dark"] {
+    --bg: #0f1216;
+    --text: #e8ecf1;
+    --muted: #a9b2bf;
+    --card: #151a21;
+    --border: #2a333d;
+    --link: #8db5ff;
+    --link-hover: #b1c9ff;
+    --table-head: #1b222b;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+  }
+  a {
+    color: var(--link);
+  }
+  a:hover {
+    color: var(--link-hover);
+  }
+  .site-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin: 0.5rem 0;
+  }
+  .site-toolbar button {
+    padding: 0.4rem 0.7rem;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    cursor: pointer;
+  }
   .controls {
     margin: 1rem 0;
     padding: 1rem;
-    border: 1px solid #e1e4e8;
+    border: 1px solid var(--border);
     border-radius: 8px;
-    background: #fff;
+    background: var(--card);
   }
   .controls label {
     display: block;
@@ -45,19 +92,21 @@ title: Ottawa Drop-in Skating
     max-width: 420px;
     padding: 0.4rem 0.5rem;
     border-radius: 4px;
-    border: 1px solid #c7ced6;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
   }
   .controls button {
     margin-top: 0.75rem;
     padding: 0.5rem 0.9rem;
     border-radius: 4px;
     border: none;
-    background: #2b5b8c;
-    color: #fff;
+    background: var(--link);
+    color: var(--card);
     cursor: pointer;
   }
   .controls button:hover {
-    background: #244b72;
+    background: var(--link-hover);
   }
   #status {
     margin-top: 0.5rem;
@@ -75,13 +124,13 @@ title: Ottawa Drop-in Skating
   }
   .results-table th,
   .results-table td {
-    border-bottom: 1px solid #e1e4e8;
+    border-bottom: 1px solid var(--border);
     padding: 0.35rem 0.5rem;
     vertical-align: top;
     word-break: normal;
   }
   .results-table th {
-    background: #f6f8fa;
+    background: var(--table-head);
     font-weight: 600;
   }
   .results-table th:nth-child(1),
@@ -119,11 +168,9 @@ title: Ottawa Drop-in Skating
   }
 </style>
 
-<h1>Ottawa Drop-in Skating</h1>
-<p>Search drop-in skating sessions by date and neighbourhood.</p>
-<p>
-  <a href="https://github.com/chrisbuchanpham/ottawa_dropin_skating">View the Project on GitHub</a>
-</p>
+<div class="site-toolbar">
+  <button id="theme-toggle" type="button">Dark mode</button>
+</div>
 
 <div class="controls">
   <label for="start-date">Start date</label>

@@ -570,7 +570,28 @@ function setDefaultKeywords() {
   document.getElementById("keywords").value = DEFAULT_KEYWORDS.join(", ");
 }
 
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  localStorage.setItem("theme", theme);
+  const toggle = document.getElementById("theme-toggle");
+  if (toggle) {
+    toggle.textContent = theme === "dark" ? "Light mode" : "Dark mode";
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  const saved = localStorage.getItem("theme");
+  const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  applyTheme(saved || (prefersDark ? "dark" : "light"));
+
+  const toggle = document.getElementById("theme-toggle");
+  if (toggle) {
+    toggle.addEventListener("click", () => {
+      const current = document.documentElement.getAttribute("data-theme") || "light";
+      applyTheme(current === "dark" ? "light" : "dark");
+    });
+  }
+
   setDefaultDates();
   setDefaultKeywords();
   document.getElementById("search-button").addEventListener("click", runSearch);
