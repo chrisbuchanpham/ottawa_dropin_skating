@@ -233,6 +233,60 @@ title: Ottawa Drop-in Skating
     margin-top: 1.5rem;
     color: var(--text);
   }
+  @media (max-width: 700px) {
+    .wrapper {
+      padding: 0 12px;
+    }
+    .controls input[type="date"],
+    .controls input[type="text"] {
+      max-width: none;
+    }
+    .date-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .activity-filter,
+    .time-filters,
+    .neighbourhood-filter-list {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .results-table {
+      table-layout: auto;
+    }
+    .results-table thead {
+      display: none;
+    }
+    .results-table,
+    .results-table tbody,
+    .results-table tr,
+    .results-table td {
+      display: block;
+      width: 100%;
+    }
+    .results-table tr {
+      margin-bottom: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.4rem 0.5rem;
+      background: var(--card);
+    }
+    .results-table td {
+      display: flex;
+      gap: 0.6rem;
+      padding: 0.35rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .results-table td:last-child {
+      border-bottom: none;
+    }
+    .results-table td::before {
+      content: attr(data-label);
+      font-weight: 600;
+      width: 120px;
+      flex: 0 0 auto;
+    }
+  }
 </style>
 
 

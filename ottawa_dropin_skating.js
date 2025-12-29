@@ -473,17 +473,19 @@ function renderTable(rows, orderMap, container) {
       const tr = document.createElement("tr");
 
       const cells = [
-        row.date,
-        row.start_time,
-        row.end_time,
+        { label: "Date", value: row.date },
+        { label: "Start", value: row.start_time },
+        { label: "End", value: row.end_time },
       ];
-      for (const value of cells) {
+      for (const cell of cells) {
         const td = document.createElement("td");
-        td.textContent = value;
+        td.textContent = cell.value;
+        td.setAttribute("data-label", cell.label);
         tr.appendChild(td);
       }
 
       const reservationTd = document.createElement("td");
+      reservationTd.setAttribute("data-label", "Reservation");
       if (row.reservation_required) {
         const links = row.reservation_links ? row.reservation_links.split(";") : [];
         const firstLink = links.find((value) => value.trim()) || "";
@@ -504,13 +506,16 @@ function renderTable(rows, orderMap, container) {
 
       const activityTd = document.createElement("td");
       activityTd.textContent = row.activity_name;
+      activityTd.setAttribute("data-label", "Activity");
       tr.appendChild(activityTd);
 
       const facilityTd = document.createElement("td");
       facilityTd.textContent = row.facility_name;
+      facilityTd.setAttribute("data-label", "Facility");
       tr.appendChild(facilityTd);
 
       const addressTd = document.createElement("td");
+      addressTd.setAttribute("data-label", "Address");
       if (row.facility_address) {
         const link = document.createElement("a");
         const destination = encodeURIComponent(row.facility_address);
