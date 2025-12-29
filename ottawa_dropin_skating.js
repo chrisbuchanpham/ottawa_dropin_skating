@@ -18,6 +18,17 @@ const HOCKEY_TERMS = [
   "stick & puck",
   "shinny",
 ];
+const YOUTH_HOCKEY_TERMS = [
+  "youth",
+  "child",
+  "children",
+  "preschool",
+  "family hockey",
+  "youth and adult",
+  "ages 6",
+  "6 to 12",
+  "13 to 17",
+];
 
 const NEIGHBOURHOOD_KEYWORDS = [
   ["Carp", ["carp", "w. erskine johnston"]],
@@ -238,8 +249,12 @@ function activityMatchesCategory(activity, category) {
     return false;
   }
   const hasHockey = HOCKEY_TERMS.some((term) => haystack.includes(term));
-  if (category === "hockey") {
-    return hasHockey;
+  const isYouthHockey = hasHockey && YOUTH_HOCKEY_TERMS.some((term) => haystack.includes(term));
+  if (category === "adult-hockey") {
+    return hasHockey && !isYouthHockey;
+  }
+  if (category === "youth-hockey") {
+    return isYouthHockey;
   }
   if (category === "skating") {
     return haystack.includes("skate") && !hasHockey;
