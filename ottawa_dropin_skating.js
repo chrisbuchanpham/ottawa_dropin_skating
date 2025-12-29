@@ -124,6 +124,22 @@ function normalizeKeywords(raw) {
     .filter(Boolean);
 }
 
+function parseISODateToUTC(dateStr) {
+  if (!dateStr) return null;
+  const parts = dateStr.split("-").map((value) => Number(value));
+  if (parts.length !== 3 || parts.some((value) => Number.isNaN(value))) {
+    return null;
+  }
+  const [year, month, day] = parts;
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+function getWeekdayUTC(dateObj) {
+  return ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][
+    dateObj.getUTCDay()
+  ];
+}
+
 function extractFsa(address) {
   const match = address.match(/([A-Z]\d[A-Z])\s*\d[A-Z]\d/i) || address.match(/([A-Z]\d[A-Z])/i);
   return match ? match[1].toUpperCase() : "";
@@ -185,13 +201,15 @@ function activityMatches(activity, keywords) {
 
 function activityOnDate(activity, dateObj) {
   const weekday = (activity.weekday || "").toLowerCase();
-  if (!weekday || dateObj.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase() !== weekday) {
+  if (!weekday || getWeekdayUTC(dateObj) !== weekday) {
     return false;
   }
-  if (activity.startDate && dateObj < new Date(activity.startDate)) {
+  const start = parseISODateToUTC(activity.startDate);
+  if (start && dateObj < start) {
     return false;
   }
-  if (activity.endDate && dateObj > new Date(activity.endDate)) {
+  const end = parseISODateToUTC(activity.endDate);
+  if (end && dateObj > end) {
     return false;
   }
   if (activity.startTime && activity.startTime >= LATEST_START_TIME) {
@@ -205,9 +223,12 @@ function iterDates(startDate, endDate) {
   if (!startDate) {
     return dates;
   }
-  const start = new Date(startDate);
-  const end = endDate ? new Date(endDate) : new Date(startDate);
-  for (let current = new Date(start); current <= end; current.setDate(current.getDate() + 1)) {
+  const start = parseISODateToUTC(startDate);
+  const end = parseISODateToUTC(endDate || startDate);
+  if (!start || !end) {
+    return dates;
+  }
+  for (let current = new Date(start); current <= end; current.setUTCDate(current.getUTCDate() + 1)) {
     dates.push(new Date(current));
   }
   return dates;
@@ -252,6 +273,26 @@ function buildRows(dates, data, keywords) {
     }
   }
   return rows;
+}
+
+function dedupeRows(rows) {
+  const seen = new Set();
+  const deduped = [];
+  for (const row of rows) {
+    const key = [
+      row.date,
+      row.facility_url,
+      row.start_time,
+      row.end_time,
+      row.activity_name,
+    ].join("|");
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    deduped.push(row);
+  }
+  return deduped;
 }
 
 function buildNeighbourhoodOrder(rows, facilities) {
@@ -430,7 +471,7 @@ async function runSearch() {
       throw new Error(`Fetch failed: ${response.status}`);
     }
     const data = await response.json();
-    const rows = buildRows(dates, data, keywords);
+    const rows = dedupeRows(buildRows(dates, data, keywords));
     const orderMap = buildNeighbourhoodOrder(rows, data.facility || []);
     sortRows(rows, orderMap);
 
@@ -450,7 +491,9 @@ async function runSearch() {
 
 function setDefaultDates() {
   const today = new Date();
-  const iso = today.toISOString().slice(0, 10);
+  const iso = new Date(today.getTime() - today.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 10);
   document.getElementById("start-date").value = iso;
 }
 
