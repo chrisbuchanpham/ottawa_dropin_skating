@@ -85,6 +85,60 @@ const NEIGHBOURHOOD_KEYWORDS = [
   ["Cumberland", ["cumberland"]],
 ];
 
+const NEIGHBOURHOOD_WEST_EAST_ORDER = [
+  "Carp",
+  "Dunrobin",
+  "Fitzroy Harbour",
+  "Constance Bay",
+  "Woodlawn",
+  "Kanata",
+  "Bells Corners",
+  "Stittsville",
+  "Richmond",
+  "Munster",
+  "Nepean",
+  "Barrhaven",
+  "Manotick",
+  "North Gower",
+  "Kars",
+  "Osgoode",
+  "Metcalfe",
+  "Greely",
+  "Vernon",
+  "Kenmore",
+  "Findlay Creek",
+  "Riverside South",
+  "Hunt Club",
+  "Alta Vista",
+  "Carleton Heights",
+  "Carlington",
+  "Britannia",
+  "Bayshore",
+  "Westboro",
+  "Hintonburg",
+  "Little Italy",
+  "Chinatown",
+  "Downtown",
+  "The Glebe",
+  "Old Ottawa South",
+  "Old Ottawa East",
+  "Sandy Hill",
+  "ByWard Market",
+  "Lowertown",
+  "New Edinburgh",
+  "Rockcliffe",
+  "Vanier",
+  "Overbrook",
+  "Manor Park",
+  "Beacon Hill",
+  "Blackburn Hamlet",
+  "Gloucester",
+  "Orleans",
+  "Navan",
+  "Cumberland",
+  "Rural Ottawa",
+];
+
 const FACILITY_NEIGHBOURHOOD_OVERRIDES = {
   "bob macquarrie recreation complex": "Orleans",
   "bob-macquarrie-recreation-complex-orleans": "Orleans",
@@ -387,11 +441,18 @@ function buildNeighbourhoodOrder(rows, facilities) {
     averages[neighbourhood] = values.reduce((a, b) => a + b, 0) / values.length;
   }
   const neighbourhoods = new Set(rows.map((row) => row.neighbourhood));
-  const ordered = Array.from(neighbourhoods).sort((a, b) => {
+  const orderedBase = NEIGHBOURHOOD_WEST_EAST_ORDER.filter((name) =>
+    neighbourhoods.has(name)
+  );
+  const remaining = Array.from(neighbourhoods).filter(
+    (name) => !NEIGHBOURHOOD_WEST_EAST_ORDER.includes(name)
+  );
+  remaining.sort((a, b) => {
     const aVal = averages[a] ?? 999;
     const bVal = averages[b] ?? 999;
     return aVal === bVal ? a.localeCompare(b) : aVal - bVal;
   });
+  const ordered = orderedBase.concat(remaining);
   const orderMap = {};
   ordered.forEach((name, idx) => {
     orderMap[name] = idx;
