@@ -3,6 +3,8 @@ const EXCLUDED_TERMS = [
   "ringette",
   "figure skate",
   "figure skating",
+  "roller skate",
+  "roller skating",
   "50+",
   "50 +",
   "50-plus",
