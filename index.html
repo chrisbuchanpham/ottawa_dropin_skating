@@ -245,31 +245,17 @@ title: Ottawa Drop-in Skating
     margin-top: 1.5rem;
     color: var(--text);
   }
-  .ad-card {
-    margin: 1.5rem 0 2rem;
-    padding: 0.9rem 1rem;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background: var(--card);
-    display: flex;
+  .ad-inline {
+    margin: 1.25rem 0 2rem;
+    display: inline-flex;
     align-items: center;
-    gap: 0.75rem;
-  }
-  .ad-logo {
-    width: 40px;
-    height: 40px;
-    flex: 0 0 auto;
-  }
-  .ad-text {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-  }
-  .ad-title {
-    font-weight: 700;
-  }
-  .ad-copy {
+    gap: 0.5rem;
     color: var(--muted);
+    font-size: 0.95rem;
+  }
+  .ad-inline img {
+    width: 18px;
+    height: 18px;
   }
   @media (max-width: 700px) {
     .wrapper {
@@ -369,13 +355,10 @@ title: Ottawa Drop-in Skating
 
 <div id="results"></div>
 
-<div class="ad-card">
-  <img class="ad-logo" src="https://www.withhudson.ai/hudson-logo.svg" alt="Hudson logo" />
-  <div class="ad-text">
-    <div class="ad-title">Hudson AI</div>
-    <div class="ad-copy">Plan trips faster with a smart travel companion.</div>
-    <a href="https://www.withhudson.ai/" target="_blank" rel="noopener">Visit withhudson.ai</a>
-  </div>
+<div class="ad-inline">
+  <img src="https://www.withhudson.ai/hudson-logo.svg" alt="Hudson logo" />
+  <span>Hudson AI: a smart travel companion.</span>
+  <a href="https://www.withhudson.ai/" target="_blank" rel="noopener">withhudson.ai</a>
 </div>
 
 <script src="ottawa_dropin_skating.js"></script>
