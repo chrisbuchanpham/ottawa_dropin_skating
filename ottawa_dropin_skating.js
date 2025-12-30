@@ -140,15 +140,41 @@ const FACILITY_RESERVATION_OVERRIDES = {
   "bob-macquarrie-recreation-complex-orleans": false,
 };
 
-function normalizeText(value) {
-  return value.toLowerCase().replace(/skating/g, "skate");
-}
+const RESERVATION_NOT_REQUIRED_TERMS = [
+  "reservation not required",
+  "reservations not required",
+  "no reservation required",
+  "no reservations required",
+  "no reservation",
+  "no reservations",
+  "walk-in",
+];
+const RESERVATION_REQUIRED_TERMS = ["reservation required", "reservations required"];
 
 function normalizeMatchText(value) {
-  return value
+  return String(value || "")
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
+}
+
+function normalizeForSearch(value) {
+  return normalizeMatchText(value).replace(/skating/g, "skate");
+}
+
+function includesAny(haystack, terms) {
+  return terms.some((term) => haystack.includes(term));
+}
+
+function buildActivityHaystack(activity) {
+  return normalizeForSearch(
+    [
+      activity.name || "",
+      activity.rawActivity || "",
+      activity.rawScheduleGroup || "",
+      activity.rawSchedule || "",
+    ].join(" ")
+  );
 }
 
 function parseISODateToUTC(dateStr) {
@@ -198,7 +224,7 @@ function detectNeighbourhood(facility) {
 }
 
 function activityExcluded(haystack) {
-  return EXCLUDED_TERMS.some((term) => haystack.includes(term));
+  return includesAny(haystack, EXCLUDED_TERMS);
 }
 
 function deriveReservationRequired(activity, facility) {
@@ -210,26 +236,11 @@ function deriveReservationRequired(activity, facility) {
     }
   }
 
-  const haystack = normalizeText(
-    [
-      activity.rawActivity || "",
-      activity.rawScheduleGroup || "",
-      activity.rawSchedule || "",
-      activity.name || "",
-    ].join(" ")
-  );
-  if (
-    haystack.includes("reservation not required") ||
-    haystack.includes("reservations not required") ||
-    haystack.includes("no reservation required") ||
-    haystack.includes("no reservations required") ||
-    haystack.includes("no reservation") ||
-    haystack.includes("no reservations") ||
-    haystack.includes("walk-in")
-  ) {
+  const haystack = buildActivityHaystack(activity);
+  if (includesAny(haystack, RESERVATION_NOT_REQUIRED_TERMS)) {
     return false;
   }
-  if (haystack.includes("reservation required") || haystack.includes("reservations required")) {
+  if (includesAny(haystack, RESERVATION_REQUIRED_TERMS)) {
     return true;
   }
   if ((activity.reservationLinks || []).length > 0) {
@@ -239,19 +250,12 @@ function deriveReservationRequired(activity, facility) {
 }
 
 function activityMatchesCategory(activity, category) {
-  const haystack = normalizeText(
-    [
-      activity.name || "",
-      activity.rawActivity || "",
-      activity.rawScheduleGroup || "",
-      activity.rawSchedule || "",
-    ].join(" ")
-  );
+  const haystack = buildActivityHaystack(activity);
   if (activityExcluded(haystack)) {
     return false;
   }
-  const hasHockey = HOCKEY_TERMS.some((term) => haystack.includes(term));
-  const isYouthHockey = hasHockey && YOUTH_HOCKEY_TERMS.some((term) => haystack.includes(term));
+  const hasHockey = includesAny(haystack, HOCKEY_TERMS);
+  const isYouthHockey = hasHockey && includesAny(haystack, YOUTH_HOCKEY_TERMS);
   if (category === "adult-hockey") {
     return hasHockey && !isYouthHockey;
   }
