@@ -34,6 +34,12 @@ title: Ottawa Drop-in Skating
     float: none !important;
     clear: both;
   }
+  .footer-extras {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin: 0 0 0.6rem;
+  }
   :root {
     --bg: #f7f8fa;
     --text: #1e1f22;
@@ -354,14 +360,30 @@ title: Ottawa Drop-in Skating
 
 <div id="results"></div>
 
-<div class="ad-inline">
-  <img src="https://www.withhudson.ai/hudson-logo.svg" alt="Hudson logo" />
-  <span>Hudson AI: a smart travel companion.</span>
-  <a href="https://www.withhudson.ai/" target="_blank" rel="noopener">withhudson.ai</a>
-</div>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const footer = document.querySelector("footer");
+    if (!footer) return;
 
-<div class="project-footer-link">
-  <a href="https://github.com/chrisbuchanpham/ottawa_dropin_skating">View the Project on GitHub</a>
-</div>
+    const container = document.createElement("div");
+    container.className = "footer-extras";
+
+    const hudson = document.createElement("div");
+    hudson.className = "ad-inline";
+    hudson.innerHTML =
+      '<img src="https://www.withhudson.ai/hudson-logo.svg" alt="Hudson logo" />' +
+      '<span>Hudson AI: a smart travel companion.</span>' +
+      '<a href="https://www.withhudson.ai/" target="_blank" rel="noopener">withhudson.ai</a>';
+
+    const project = document.createElement("div");
+    project.className = "project-footer-link";
+    project.innerHTML =
+      '<a href="https://github.com/chrisbuchanpham/ottawa_dropin_skating">View the Project on GitHub</a>';
+
+    container.appendChild(hudson);
+    container.appendChild(project);
+    footer.prepend(container);
+  });
+</script>
 
 <script src="ottawa_dropin_skating.js"></script>
