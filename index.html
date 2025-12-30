@@ -68,9 +68,7 @@ title: Ottawa Drop-in Skating
   }
   .project-links {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
+    justify-content: flex-end;
     margin: 0.5rem 0 0.75rem;
   }
   .project-links button {
@@ -83,9 +81,11 @@ title: Ottawa Drop-in Skating
   }
   @media (max-width: 700px) {
     .project-links {
-      flex-direction: column;
-      align-items: flex-start;
+      justify-content: flex-start;
     }
+  }
+  .project-footer-link {
+    margin: 0.4rem 0 0.6rem;
   }
   .controls {
     margin: 1rem 0;
@@ -246,7 +246,7 @@ title: Ottawa Drop-in Skating
     color: var(--text);
   }
   .ad-inline {
-    margin: 1.25rem 0 2rem;
+    margin: 1rem 0 0.5rem;
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
@@ -315,7 +315,6 @@ title: Ottawa Drop-in Skating
 
 
 <div class="project-links">
-  <a href="https://github.com/chrisbuchanpham/ottawa_dropin_skating">View the Project on GitHub</a>
   <button id="theme-toggle" type="button">Dark mode</button>
 </div>
 
@@ -359,6 +358,10 @@ title: Ottawa Drop-in Skating
   <img src="https://www.withhudson.ai/hudson-logo.svg" alt="Hudson logo" />
   <span>Hudson AI: a smart travel companion.</span>
   <a href="https://www.withhudson.ai/" target="_blank" rel="noopener">withhudson.ai</a>
+</div>
+
+<div class="project-footer-link">
+  <a href="https://github.com/chrisbuchanpham/ottawa_dropin_skating">View the Project on GitHub</a>
 </div>
 
 <script src="ottawa_dropin_skating.js"></script>
