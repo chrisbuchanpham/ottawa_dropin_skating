@@ -1,7 +1,36 @@
-const DATA_URL = "https://data.ottrec.ca/export/latest.json";
-const EXCLUDED_TERMS = ["hockey", "50+", "50 +", "50-plus", "50 plus", "50plus"];
+const DATA_URL = "./data/latest.json";
+const EXCLUDED_TERMS = [
+  "ringette",
+  "figure skate",
+  "figure skating",
+  "roller skate",
+  "roller skating",
+  "50+",
+  "50 +",
+  "50-plus",
+  "50 plus",
+  "50plus",
+];
 const LATEST_START_TIME = "22:00";
-const DEFAULT_KEYWORDS = ["drop-in skating", "family skating", "public skating"];
+const HOCKEY_TERMS = [
+  "hockey",
+  "pick-up hockey",
+  "pickup hockey",
+  "stick and puck",
+  "stick & puck",
+  "shinny",
+];
+const YOUTH_HOCKEY_TERMS = [
+  "youth",
+  "child",
+  "children",
+  "preschool",
+  "family hockey",
+  "youth and adult",
+  "ages 6",
+  "6 to 12",
+  "13 to 17",
+];
 
 const NEIGHBOURHOOD_KEYWORDS = [
   ["Carp", ["carp", "w. erskine johnston"]],
@@ -56,6 +85,60 @@ const NEIGHBOURHOOD_KEYWORDS = [
   ["Cumberland", ["cumberland"]],
 ];
 
+const NEIGHBOURHOOD_WEST_EAST_ORDER = [
+  "Carp",
+  "Dunrobin",
+  "Fitzroy Harbour",
+  "Constance Bay",
+  "Woodlawn",
+  "Kanata",
+  "Bells Corners",
+  "Stittsville",
+  "Richmond",
+  "Munster",
+  "Nepean",
+  "Barrhaven",
+  "Manotick",
+  "North Gower",
+  "Kars",
+  "Osgoode",
+  "Metcalfe",
+  "Greely",
+  "Vernon",
+  "Kenmore",
+  "Findlay Creek",
+  "Riverside South",
+  "Hunt Club",
+  "Alta Vista",
+  "Carleton Heights",
+  "Carlington",
+  "Britannia",
+  "Bayshore",
+  "Westboro",
+  "Hintonburg",
+  "Little Italy",
+  "Chinatown",
+  "Downtown",
+  "The Glebe",
+  "Old Ottawa South",
+  "Old Ottawa East",
+  "Sandy Hill",
+  "ByWard Market",
+  "Lowertown",
+  "New Edinburgh",
+  "Rockcliffe",
+  "Vanier",
+  "Overbrook",
+  "Manor Park",
+  "Beacon Hill",
+  "Blackburn Hamlet",
+  "Gloucester",
+  "Orleans",
+  "Navan",
+  "Cumberland",
+  "Rural Ottawa",
+];
+
 const FACILITY_NEIGHBOURHOOD_OVERRIDES = {
   "bob macquarrie recreation complex": "Orleans",
   "bob-macquarrie-recreation-complex-orleans": "Orleans",
@@ -106,41 +189,62 @@ const FSA_NEIGHBOURHOOD = {
   K4P: "Greely",
 };
 
-function parseDateLocal(isoDate) {
-  if (!isoDate) {
-    return null;
-  }
-  const parts = isoDate.split("-").map((value) => Number(value));
-  if (parts.length !== 3 || parts.some((value) => Number.isNaN(value))) {
-    return null;
-  }
-  const [year, month, day] = parts;
-  return new Date(year, month - 1, day);
-}
+const FACILITY_RESERVATION_OVERRIDES = {
+  "bob macquarrie recreation complex": false,
+  "bob-macquarrie-recreation-complex-orleans": false,
+};
 
-function formatDateLocal(dateObj) {
-  const year = dateObj.getFullYear();
-  const month = String(dateObj.getMonth() + 1).padStart(2, "0");
-  const day = String(dateObj.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function normalizeText(value) {
-  return value.toLowerCase().replace(/skating/g, "skate");
-}
+const RESERVATION_NOT_REQUIRED_TERMS = [
+  "reservation not required",
+  "reservations not required",
+  "no reservation required",
+  "no reservations required",
+  "no reservation",
+  "no reservations",
+  "walk-in",
+];
+const RESERVATION_REQUIRED_TERMS = ["reservation required", "reservations required"];
 
 function normalizeMatchText(value) {
-  return value
+  return String(value || "")
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 }
 
-function normalizeKeywords(raw) {
-  return raw
-    .split(",")
-    .map((item) => item.trim().toLowerCase().replace(/skating/g, "skate"))
-    .filter(Boolean);
+function normalizeForSearch(value) {
+  return normalizeMatchText(value).replace(/skating/g, "skate");
+}
+
+function includesAny(haystack, terms) {
+  return terms.some((term) => haystack.includes(term));
+}
+
+function buildActivityHaystack(activity) {
+  return normalizeForSearch(
+    [
+      activity.name || "",
+      activity.rawActivity || "",
+      activity.rawScheduleGroup || "",
+      activity.rawSchedule || "",
+    ].join(" ")
+  );
+}
+
+function parseISODateToUTC(dateStr) {
+  if (!dateStr) return null;
+  const parts = dateStr.split("-").map((value) => Number(value));
+  if (parts.length !== 3 || parts.some((value) => Number.isNaN(value))) {
+    return null;
+  }
+  const [year, month, day] = parts;
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+function getWeekdayUTC(dateObj) {
+  return ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][
+    dateObj.getUTCDay()
+  ];
 }
 
 function extractFsa(address) {
@@ -174,45 +278,61 @@ function detectNeighbourhood(facility) {
 }
 
 function activityExcluded(haystack) {
-  return EXCLUDED_TERMS.some((term) => haystack.includes(term));
+  return includesAny(haystack, EXCLUDED_TERMS);
 }
 
-function activityMatches(activity, keywords) {
-  const haystack = normalizeText(
-    [
-      activity.name || "",
-      activity.rawActivity || "",
-      activity.rawScheduleGroup || "",
-      activity.rawSchedule || "",
-    ].join(" ")
-  );
-  if (activityExcluded(haystack)) {
+function deriveReservationRequired(activity, facility) {
+  const nameKey = normalizeMatchText((facility && facility.name) || "");
+  const urlKey = normalizeMatchText(activity.facilityUrl || "");
+  for (const [key, value] of Object.entries(FACILITY_RESERVATION_OVERRIDES)) {
+    if (nameKey.includes(key) || urlKey.includes(key)) {
+      return value;
+    }
+  }
+
+  const haystack = buildActivityHaystack(activity);
+  if (includesAny(haystack, RESERVATION_NOT_REQUIRED_TERMS)) {
     return false;
   }
-  for (const keyword of keywords) {
-    if (keyword.includes(" ")) {
-      const parts = keyword.split(/\s+/).filter(Boolean);
-      if (parts.every((part) => haystack.includes(part))) {
-        return true;
-      }
-    } else if (haystack.includes(keyword)) {
-      return true;
-    }
+  if (includesAny(haystack, RESERVATION_REQUIRED_TERMS)) {
+    return true;
+  }
+  if ((activity.reservationLinks || []).length > 0) {
+    return true;
   }
   return false;
 }
 
+function activityMatchesCategory(activity, category) {
+  const haystack = buildActivityHaystack(activity);
+  if (activityExcluded(haystack)) {
+    return false;
+  }
+  const hasHockey = includesAny(haystack, HOCKEY_TERMS);
+  const isYouthHockey = hasHockey && includesAny(haystack, YOUTH_HOCKEY_TERMS);
+  if (category === "adult-hockey") {
+    return hasHockey && !isYouthHockey;
+  }
+  if (category === "youth-hockey") {
+    return isYouthHockey;
+  }
+  if (category === "skating") {
+    return haystack.includes("skate") && !hasHockey;
+  }
+  return true;
+}
+
 function activityOnDate(activity, dateObj) {
   const weekday = (activity.weekday || "").toLowerCase();
-  if (!weekday || dateObj.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase() !== weekday) {
+  if (!weekday || getWeekdayUTC(dateObj) !== weekday) {
     return false;
   }
-  const startDate = parseDateLocal(activity.startDate);
-  if (startDate && dateObj < startDate) {
+  const start = parseISODateToUTC(activity.startDate);
+  if (start && dateObj < start) {
     return false;
   }
-  const endDate = parseDateLocal(activity.endDate);
-  if (endDate && dateObj > endDate) {
+  const end = parseISODateToUTC(activity.endDate);
+  if (end && dateObj > end) {
     return false;
   }
   if (activity.startTime && activity.startTime >= LATEST_START_TIME) {
@@ -226,18 +346,18 @@ function iterDates(startDate, endDate) {
   if (!startDate) {
     return dates;
   }
-  const start = parseDateLocal(startDate);
-  const end = endDate ? parseDateLocal(endDate) : start ? new Date(start) : null;
+  const start = parseISODateToUTC(startDate);
+  const end = parseISODateToUTC(endDate || startDate);
   if (!start || !end) {
     return dates;
   }
-  for (let current = new Date(start); current <= end; current.setDate(current.getDate() + 1)) {
+  for (let current = new Date(start); current <= end; current.setUTCDate(current.getUTCDate() + 1)) {
     dates.push(new Date(current));
   }
   return dates;
 }
 
-function buildRows(dates, data, keywords) {
+function buildRows(dates, data, category) {
   const facilities = {};
   for (const facility of data.facility || []) {
     facilities[facility.url] = facility;
@@ -248,12 +368,12 @@ function buildRows(dates, data, keywords) {
   }
   const rows = [];
   for (const dateObj of dates) {
-    const isoDate = formatDateLocal(dateObj);
+    const isoDate = dateObj.toISOString().slice(0, 10);
     for (const activity of data.activity || []) {
       if (!activityOnDate(activity, dateObj)) {
         continue;
       }
-      if (!activityMatches(activity, keywords)) {
+      if (!activityMatchesCategory(activity, category)) {
         continue;
       }
       const facility = facilities[activity.facilityUrl] || {};
@@ -268,7 +388,7 @@ function buildRows(dates, data, keywords) {
         facility_name: facility.name || "",
         facility_address: facility.address || "",
         facility_url: activity.facilityUrl || "",
-        reservation_required: Boolean(activity.reservationRequired),
+        reservation_required: deriveReservationRequired(activity, facility),
         reservation_links: (activity.reservationLinks || []).join(";"),
         facility_latitude: facility.latitude ?? "",
         facility_longitude: facility.longitude ?? "",
@@ -276,6 +396,26 @@ function buildRows(dates, data, keywords) {
     }
   }
   return rows;
+}
+
+function dedupeRows(rows) {
+  const seen = new Set();
+  const deduped = [];
+  for (const row of rows) {
+    const key = [
+      row.date,
+      row.facility_url,
+      row.start_time,
+      row.end_time,
+      row.activity_name,
+    ].join("|");
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    deduped.push(row);
+  }
+  return deduped;
 }
 
 function buildNeighbourhoodOrder(rows, facilities) {
@@ -301,11 +441,18 @@ function buildNeighbourhoodOrder(rows, facilities) {
     averages[neighbourhood] = values.reduce((a, b) => a + b, 0) / values.length;
   }
   const neighbourhoods = new Set(rows.map((row) => row.neighbourhood));
-  const ordered = Array.from(neighbourhoods).sort((a, b) => {
+  const orderedBase = NEIGHBOURHOOD_WEST_EAST_ORDER.filter((name) =>
+    neighbourhoods.has(name)
+  );
+  const remaining = Array.from(neighbourhoods).filter(
+    (name) => !NEIGHBOURHOOD_WEST_EAST_ORDER.includes(name)
+  );
+  remaining.sort((a, b) => {
     const aVal = averages[a] ?? 999;
     const bVal = averages[b] ?? 999;
     return aVal === bVal ? a.localeCompare(b) : aVal - bVal;
   });
+  const ordered = orderedBase.concat(remaining);
   const orderMap = {};
   ordered.forEach((name, idx) => {
     orderMap[name] = idx;
@@ -325,6 +472,33 @@ function sortRows(rows, orderMap) {
   });
 }
 
+function parseHour(startTime) {
+  if (!startTime) return null;
+  const parts = startTime.split(":").map((value) => Number(value));
+  if (parts.length < 2 || parts.some((value) => Number.isNaN(value))) {
+    return null;
+  }
+  return parts[0];
+}
+
+function matchesTimeOfDay(row, filters) {
+  if (!filters.length) {
+    return true;
+  }
+  const hour = parseHour(row.start_time);
+  if (hour === null) {
+    return false;
+  }
+  const isMorning = hour < 12;
+  const isAfternoon = hour >= 12 && hour < 18;
+  const isEvening = hour >= 18;
+  return (
+    (filters.includes("morning") && isMorning) ||
+    (filters.includes("afternoon") && isAfternoon) ||
+    (filters.includes("evening") && isEvening)
+  );
+}
+
 function renderTable(rows, orderMap, container) {
   container.innerHTML = "";
   if (!rows.length) {
@@ -342,15 +516,18 @@ function renderTable(rows, orderMap, container) {
   for (const neighbourhood of neighbourhoods) {
     const heading = document.createElement("h3");
     heading.textContent = `Neighbourhood: ${neighbourhood}`;
+    heading.className = "neighbourhood-title";
     container.appendChild(heading);
 
     const table = document.createElement("table");
+    table.className = "results-table";
     const thead = document.createElement("thead");
     thead.innerHTML = `
       <tr>
         <th>Date</th>
         <th>Start</th>
         <th>End</th>
+        <th>Reservation</th>
         <th>Activity</th>
         <th>Facility</th>
         <th>Address</th>
@@ -361,14 +538,64 @@ function renderTable(rows, orderMap, container) {
     const tbody = document.createElement("tbody");
     for (const row of grouped[neighbourhood]) {
       const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${row.date}</td>
-        <td>${row.start_time}</td>
-        <td>${row.end_time}</td>
-        <td>${row.activity_name}</td>
-        <td>${row.facility_name}</td>
-        <td>${row.facility_address}</td>
-      `;
+
+      const cells = [
+        { label: "Date", value: row.date },
+        { label: "Start", value: row.start_time },
+        { label: "End", value: row.end_time },
+      ];
+      for (const cell of cells) {
+        const td = document.createElement("td");
+        td.textContent = cell.value;
+        td.setAttribute("data-label", cell.label);
+        tr.appendChild(td);
+      }
+
+      const reservationTd = document.createElement("td");
+      reservationTd.setAttribute("data-label", "Reservation");
+      if (row.reservation_required) {
+        const links = row.reservation_links ? row.reservation_links.split(";") : [];
+        const firstLink = links.find((value) => value.trim()) || "";
+        if (firstLink) {
+          const a = document.createElement("a");
+          a.href = firstLink;
+          a.target = "_blank";
+          a.rel = "noopener";
+          a.textContent = "Required";
+          reservationTd.appendChild(a);
+        } else {
+          reservationTd.textContent = "Required";
+        }
+      } else {
+        reservationTd.textContent = "No";
+      }
+      tr.appendChild(reservationTd);
+
+      const activityTd = document.createElement("td");
+      activityTd.textContent = row.activity_name;
+      activityTd.setAttribute("data-label", "Activity");
+      tr.appendChild(activityTd);
+
+      const facilityTd = document.createElement("td");
+      facilityTd.textContent = row.facility_name;
+      facilityTd.setAttribute("data-label", "Facility");
+      tr.appendChild(facilityTd);
+
+      const addressTd = document.createElement("td");
+      addressTd.setAttribute("data-label", "Address");
+      if (row.facility_address) {
+        const link = document.createElement("a");
+        const destination = encodeURIComponent(row.facility_address);
+        link.href = `https://www.google.com/maps/search/?api=1&query=${destination}`;
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = row.facility_address;
+        addressTd.appendChild(link);
+      } else {
+        addressTd.textContent = "";
+      }
+      tr.appendChild(addressTd);
+
       tbody.appendChild(tr);
     }
     table.appendChild(tbody);
@@ -425,13 +652,88 @@ function escapeCsvRow(row, fieldnames) {
     .join(",");
 }
 
+function updateDownloadLink(rows, orderMap, dates, downloadLink) {
+  const csv = buildCsv(rows, orderMap);
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  downloadLink.href = url;
+  downloadLink.download = `ottawa_dropin_skating_${dates[0].toISOString().slice(0, 10)}.csv`;
+  downloadLink.style.display = "inline-block";
+}
+
+function renderNeighbourhoodFilter(rows, orderMap, container, onSelect) {
+  const counts = {};
+  rows.forEach((row) => {
+    counts[row.neighbourhood] = (counts[row.neighbourhood] || 0) + 1;
+  });
+  const neighbourhoods = Object.keys(counts).sort((a, b) => {
+    const orderA = orderMap[a] ?? 9999;
+    const orderB = orderMap[b] ?? 9999;
+    return orderA === orderB ? a.localeCompare(b) : orderA - orderB;
+  });
+  if (!neighbourhoods.length) {
+    container.style.display = "none";
+    return;
+  }
+  container.style.display = "block";
+  container.innerHTML = "";
+
+  const title = document.createElement("div");
+  title.className = "filter-title";
+  title.textContent = "Filter by Neighbourhood:";
+  container.appendChild(title);
+
+  const list = document.createElement("div");
+  list.className = "neighbourhood-filter-list";
+  container.appendChild(list);
+
+  const buttons = [];
+  function addButton(label, count, value) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "filter-chip";
+    button.dataset.value = value;
+    button.textContent = `${label} (${count})`;
+    list.appendChild(button);
+    buttons.push(button);
+    return button;
+  }
+
+  addButton("All", rows.length, "__all__").classList.add("active");
+  neighbourhoods.forEach((name) => addButton(name, counts[name], name));
+
+  const setActive = (value) => {
+    buttons.forEach((button) => {
+      button.classList.toggle("active", button.dataset.value === value);
+    });
+    if (value === "__all__") {
+      onSelect(rows);
+    } else {
+      onSelect(rows.filter((row) => row.neighbourhood === value));
+    }
+  };
+
+  list.addEventListener("click", (event) => {
+    const target = event.target;
+    if (target instanceof HTMLElement && target.dataset.value) {
+      setActive(target.dataset.value);
+    }
+  });
+
+  setActive("__all__");
+}
+
 async function runSearch() {
   const startDate = document.getElementById("start-date").value;
   const endDate = document.getElementById("end-date").value;
-  const keywordsInput = document.getElementById("keywords").value;
+  const activityFilter = document.querySelector('input[name="activity-filter"]:checked');
+  const timeFilters = Array.from(document.querySelectorAll('input[name="time-filter"]:checked')).map(
+    (input) => input.value
+  );
   const status = document.getElementById("status");
   const tableContainer = document.getElementById("results");
   const downloadLink = document.getElementById("download");
+  const neighbourhoodFilter = document.getElementById("neighbourhood-filter");
 
   status.textContent = "Loading data...";
   tableContainer.innerHTML = "";
@@ -442,31 +744,39 @@ async function runSearch() {
     status.textContent = "Select a start date.";
     return;
   }
-  const keywords = normalizeKeywords(keywordsInput);
-  if (!keywords.length) {
-    status.textContent = "Enter at least one keyword.";
-    return;
-  }
+  const category = activityFilter ? activityFilter.value : "skating";
 
   try {
-    const response = await fetch(DATA_URL);
+    const response = await fetch(DATA_URL, { cache: "no-store" });
     if (!response.ok) {
       throw new Error(`Fetch failed: ${response.status}`);
     }
     const data = await response.json();
-    const rows = buildRows(dates, data, keywords);
+    const rows = dedupeRows(buildRows(dates, data, category)).filter((row) =>
+      matchesTimeOfDay(row, timeFilters)
+    );
+    if (!rows.length) {
+      status.textContent = "No matching sessions.";
+      tableContainer.textContent = "No matching sessions.";
+      if (neighbourhoodFilter) {
+        neighbourhoodFilter.style.display = "none";
+      }
+      return;
+    }
     const orderMap = buildNeighbourhoodOrder(rows, data.facility || []);
     sortRows(rows, orderMap);
 
-    const csv = buildCsv(rows, orderMap);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    downloadLink.href = url;
-    downloadLink.download = `ottawa_dropin_skating_${formatDateLocal(dates[0])}.csv`;
-    downloadLink.style.display = "inline-block";
+    const applySelection = (filteredRows) => {
+      status.textContent = `Found ${filteredRows.length} sessions.`;
+      renderTable(filteredRows, orderMap, tableContainer);
+      updateDownloadLink(filteredRows, orderMap, dates, downloadLink);
+    };
 
-    status.textContent = `Found ${rows.length} sessions.`;
-    renderTable(rows, orderMap, tableContainer);
+    if (!neighbourhoodFilter) {
+      applySelection(rows);
+      return;
+    }
+    renderNeighbourhoodFilter(rows, orderMap, neighbourhoodFilter, applySelection);
   } catch (error) {
     status.textContent = `Error: ${error.message}`;
   }
@@ -474,15 +784,49 @@ async function runSearch() {
 
 function setDefaultDates() {
   const today = new Date();
-  document.getElementById("start-date").value = formatDateLocal(today);
+  const iso = new Date(today.getTime() - today.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 10);
+  document.getElementById("start-date").value = iso;
 }
 
-function setDefaultKeywords() {
-  document.getElementById("keywords").value = DEFAULT_KEYWORDS.join(", ");
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  localStorage.setItem("theme", theme);
+  const toggle = document.getElementById("theme-toggle");
+  if (toggle) {
+    toggle.textContent = theme === "dark" ? "Light mode" : "Dark mode";
+  }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  const saved = localStorage.getItem("theme");
+  const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  applyTheme(saved || (prefersDark ? "dark" : "light"));
+
+  const toggle = document.getElementById("theme-toggle");
+  if (toggle) {
+    toggle.addEventListener("click", () => {
+      const current = document.documentElement.getAttribute("data-theme") || "light";
+      applyTheme(current === "dark" ? "light" : "dark");
+    });
+  }
+
   setDefaultDates();
-  setDefaultKeywords();
   document.getElementById("search-button").addEventListener("click", runSearch);
+  const todayButton = document.getElementById("today-button");
+  if (todayButton) {
+    todayButton.addEventListener("click", () => {
+      setDefaultDates();
+    });
+  }
+  const clearEndDate = document.getElementById("clear-end-date");
+  if (clearEndDate) {
+    clearEndDate.addEventListener("click", () => {
+      const endDate = document.getElementById("end-date");
+      if (endDate) {
+        endDate.value = "";
+      }
+    });
+  }
 });
