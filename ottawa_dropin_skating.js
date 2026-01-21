@@ -1,4 +1,6 @@
 const DATA_URL = "./data/latest.json";
+const FALLBACK_DATA_URL =
+  "https://raw.githubusercontent.com/chrisbuchanpham/ottawa_dropin_skating/main/data/latest.json";
 const EXCLUDED_TERMS = [
   "ringette",
   "figure skate",
@@ -652,6 +654,22 @@ function escapeCsvRow(row, fieldnames) {
     .join(",");
 }
 
+async function fetchJson(url) {
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Fetch failed: ${response.status}`);
+  }
+  return response.json();
+}
+
+async function fetchData() {
+  try {
+    return { data: await fetchJson(DATA_URL), source: "local" };
+  } catch (error) {
+    return { data: await fetchJson(FALLBACK_DATA_URL), source: "remote" };
+  }
+}
+
 function updateDownloadLink(rows, orderMap, dates, downloadLink) {
   const csv = buildCsv(rows, orderMap);
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -747,11 +765,7 @@ async function runSearch() {
   const category = activityFilter ? activityFilter.value : "skating";
 
   try {
-    const response = await fetch(DATA_URL, { cache: "no-store" });
-    if (!response.ok) {
-      throw new Error(`Fetch failed: ${response.status}`);
-    }
-    const data = await response.json();
+    const { data, source } = await fetchData();
     const rows = dedupeRows(buildRows(dates, data, category)).filter((row) =>
       matchesTimeOfDay(row, timeFilters)
     );
@@ -767,7 +781,8 @@ async function runSearch() {
     sortRows(rows, orderMap);
 
     const applySelection = (filteredRows) => {
-      status.textContent = `Found ${filteredRows.length} sessions.`;
+      const label = source === "remote" ? " (fallback data)" : "";
+      status.textContent = `Found ${filteredRows.length} sessions.${label}`;
       renderTable(filteredRows, orderMap, tableContainer);
       updateDownloadLink(filteredRows, orderMap, dates, downloadLink);
     };
@@ -778,7 +793,7 @@ async function runSearch() {
     }
     renderNeighbourhoodFilter(rows, orderMap, neighbourhoodFilter, applySelection);
   } catch (error) {
-    status.textContent = `Error: ${error.message}`;
+    status.textContent = `Error: ${error.message}. Try a hard refresh or the GitHub Pages site.`;
   }
 }
 
