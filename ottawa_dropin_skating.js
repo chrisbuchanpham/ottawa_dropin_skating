@@ -14,6 +14,7 @@ const EXCLUDED_TERMS = [
   "50plus",
 ];
 const LATEST_START_TIME = "22:00";
+const DEFAULT_RANGE_DAYS = 7;
 const HOCKEY_TERMS = [
   "hockey",
   "pick-up hockey",
@@ -243,6 +244,11 @@ function parseISODateToUTC(dateStr) {
   return new Date(Date.UTC(year, month - 1, day));
 }
 
+function getLocalIsoDate(dateObj) {
+  const local = new Date(dateObj.getTime() - dateObj.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
 function getWeekdayUTC(dateObj) {
   return ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][
     dateObj.getUTCDay()
@@ -349,8 +355,20 @@ function iterDates(startDate, endDate) {
     return dates;
   }
   const start = parseISODateToUTC(startDate);
-  const end = parseISODateToUTC(endDate || startDate);
-  if (!start || !end) {
+  if (!start) {
+    return dates;
+  }
+  let end = null;
+  if (endDate) {
+    end = parseISODateToUTC(endDate);
+    if (!end) {
+      return dates;
+    }
+  } else {
+    end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + DEFAULT_RANGE_DAYS - 1);
+  }
+  if (end < start) {
     return dates;
   }
   for (let current = new Date(start); current <= end; current.setUTCDate(current.getUTCDate() + 1)) {
@@ -483,6 +501,19 @@ function parseHour(startTime) {
   return parts[0];
 }
 
+function parseTimeToMinutes(timeValue) {
+  if (!timeValue) return null;
+  const parts = timeValue.split(":").map((value) => Number(value));
+  if (parts.length < 2 || parts.some((value) => Number.isNaN(value))) {
+    return null;
+  }
+  const [hour, minute] = parts;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+    return null;
+  }
+  return hour * 60 + minute;
+}
+
 function matchesTimeOfDay(row, filters) {
   if (!filters.length) {
     return true;
@@ -499,6 +530,21 @@ function matchesTimeOfDay(row, filters) {
     (filters.includes("afternoon") && isAfternoon) ||
     (filters.includes("evening") && isEvening)
   );
+}
+
+function isSessionUpcoming(row, todayIso, nowMinutes) {
+  if (row.date !== todayIso) {
+    return true;
+  }
+  const startMinutes = parseTimeToMinutes(row.start_time);
+  const endMinutes = parseTimeToMinutes(row.end_time);
+  if (endMinutes !== null) {
+    return nowMinutes <= endMinutes;
+  }
+  if (startMinutes !== null) {
+    return startMinutes >= nowMinutes;
+  }
+  return true;
 }
 
 function renderTable(rows, orderMap, container) {
@@ -748,6 +794,9 @@ async function runSearch() {
   const timeFilters = Array.from(document.querySelectorAll('input[name="time-filter"]:checked')).map(
     (input) => input.value
   );
+  const now = new Date();
+  const todayIso = getLocalIsoDate(now);
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
   const status = document.getElementById("status");
   const tableContainer = document.getElementById("results");
   const downloadLink = document.getElementById("download");
@@ -766,8 +815,10 @@ async function runSearch() {
 
   try {
     const { data, source } = await fetchData();
-    const rows = dedupeRows(buildRows(dates, data, category)).filter((row) =>
-      matchesTimeOfDay(row, timeFilters)
+    const rows = dedupeRows(buildRows(dates, data, category)).filter(
+      (row) =>
+        matchesTimeOfDay(row, timeFilters) &&
+        isSessionUpcoming(row, todayIso, nowMinutes)
     );
     if (!rows.length) {
       status.textContent = "No matching sessions.";
@@ -798,11 +849,7 @@ async function runSearch() {
 }
 
 function setDefaultDates() {
-  const today = new Date();
-  const iso = new Date(today.getTime() - today.getTimezoneOffset() * 60000)
-    .toISOString()
-    .slice(0, 10);
-  document.getElementById("start-date").value = iso;
+  document.getElementById("start-date").value = getLocalIsoDate(new Date());
 }
 
 function applyTheme(theme) {
