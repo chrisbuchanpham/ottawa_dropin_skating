@@ -811,7 +811,7 @@ async function runSearch() {
         message = "No more sessions for that day.";
       }
       status.textContent = message;
-      tableContainer.textContent = message;
+      tableContainer.innerHTML = "";
       if (neighbourhoodFilter) {
         neighbourhoodFilter.style.display = "none";
       }
