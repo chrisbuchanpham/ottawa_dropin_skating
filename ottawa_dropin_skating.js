@@ -14,7 +14,6 @@ const EXCLUDED_TERMS = [
   "50plus",
 ];
 const LATEST_START_TIME = "22:00";
-const DEFAULT_RANGE_DAYS = 7;
 const HOCKEY_TERMS = [
   "hockey",
   "pick-up hockey",
@@ -355,20 +354,8 @@ function iterDates(startDate, endDate) {
     return dates;
   }
   const start = parseISODateToUTC(startDate);
-  if (!start) {
-    return dates;
-  }
-  let end = null;
-  if (endDate) {
-    end = parseISODateToUTC(endDate);
-    if (!end) {
-      return dates;
-    }
-  } else {
-    end = new Date(start);
-    end.setUTCDate(end.getUTCDate() + DEFAULT_RANGE_DAYS - 1);
-  }
-  if (end < start) {
+  const end = parseISODateToUTC(endDate || startDate);
+  if (!start || !end) {
     return dates;
   }
   for (let current = new Date(start); current <= end; current.setUTCDate(current.getUTCDate() + 1)) {
@@ -815,14 +802,16 @@ async function runSearch() {
 
   try {
     const { data, source } = await fetchData();
-    const rows = dedupeRows(buildRows(dates, data, category)).filter(
-      (row) =>
-        matchesTimeOfDay(row, timeFilters) &&
-        isSessionUpcoming(row, todayIso, nowMinutes)
-    );
+    const allRows = dedupeRows(buildRows(dates, data, category));
+    const filteredRows = allRows.filter((row) => matchesTimeOfDay(row, timeFilters));
+    const rows = filteredRows.filter((row) => isSessionUpcoming(row, todayIso, nowMinutes));
     if (!rows.length) {
-      status.textContent = "No matching sessions.";
-      tableContainer.textContent = "No matching sessions.";
+      let message = "No matching sessions.";
+      if (filteredRows.length && filteredRows.every((row) => row.date === todayIso)) {
+        message = "No more sessions for that day.";
+      }
+      status.textContent = message;
+      tableContainer.textContent = message;
       if (neighbourhoodFilter) {
         neighbourhoodFilter.style.display = "none";
       }
