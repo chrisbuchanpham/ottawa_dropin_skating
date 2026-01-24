@@ -1318,6 +1318,7 @@ async function updateView() {
   if (status) status.textContent = "Loading data...";
   if (calendarStatus) calendarStatus.textContent = "Loading data...";
   closeDayModal();
+  resetDragState();
 
   try {
     await ensureData();
@@ -1337,6 +1338,15 @@ function updateHistory(method, stateObj, url) {
   } catch (error) {
     // Ignore history errors (e.g., file://).
   }
+}
+
+function resetDragState() {
+  state.dragging = false;
+  state.dragStart = null;
+  state.dragEnd = null;
+  state.dragMoved = false;
+  state.dragShift = false;
+  state.previewRange = null;
 }
 
 function setModalOpen(isOpen) {
@@ -1707,6 +1717,16 @@ function setupLocationControls() {
       maxZoom: 19,
       attribution: "&copy; OpenStreetMap contributors",
     }).addTo(state.mapInstance);
+    setTimeout(() => {
+      if (state.mapInstance) {
+        state.mapInstance.invalidateSize();
+      }
+    }, 0);
+    window.addEventListener("resize", () => {
+      if (state.mapInstance) {
+        state.mapInstance.invalidateSize();
+      }
+    });
     state.mapInstance.on("click", (event) => {
       const { lat, lng } = event.latlng;
       state.mapLocation = { latitude: lat, longitude: lng };
