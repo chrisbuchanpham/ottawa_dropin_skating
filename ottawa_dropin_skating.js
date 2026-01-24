@@ -582,7 +582,7 @@ function renderTable(rows, orderMap, container) {
       const tr = document.createElement("tr");
 
       const cells = [
-        { label: "Date", value: row.date },
+        { label: "Date", value: formatListDate(row.date) },
         { label: "Start", value: row.start_time },
         { label: "End", value: row.end_time },
       ];
@@ -619,8 +619,17 @@ function renderTable(rows, orderMap, container) {
       tr.appendChild(activityTd);
 
       const facilityTd = document.createElement("td");
-      facilityTd.textContent = row.facility_name;
       facilityTd.setAttribute("data-label", "Facility");
+      if (row.facility_url) {
+        const link = document.createElement("a");
+        link.href = row.facility_url;
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = row.facility_name || row.facility_url;
+        facilityTd.appendChild(link);
+      } else {
+        facilityTd.textContent = row.facility_name;
+      }
       tr.appendChild(facilityTd);
 
       const addressTd = document.createElement("td");
@@ -714,8 +723,11 @@ function updateDownloadLink(rows, orderMap, dates, downloadLink) {
   const csv = buildCsv(rows, orderMap);
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
+  const start = dates[0] ? dates[0].toISOString().slice(0, 10) : "selection";
+  const end = dates[dates.length - 1] ? dates[dates.length - 1].toISOString().slice(0, 10) : start;
+  const label = start === end ? start : `${start}_to_${end}`;
   downloadLink.href = url;
-  downloadLink.download = `ottawa_dropin_skating_${dates[0].toISOString().slice(0, 10)}.csv`;
+  downloadLink.download = `ottawa_dropin_skating_${label}.csv`;
   downloadLink.style.display = "inline-block";
 }
 
@@ -871,6 +883,17 @@ function formatLongDate(iso) {
   return date.toLocaleDateString(undefined, {
     weekday: "long",
     month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatListDate(iso) {
+  const date = toLocalDateFromIso(iso);
+  if (!date) return iso || "";
+  return date.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "short",
     day: "numeric",
     year: "numeric",
   });
@@ -1316,6 +1339,10 @@ function updateHistory(method, stateObj, url) {
   }
 }
 
+function setModalOpen(isOpen) {
+  document.body.classList.toggle("modal-open", Boolean(isOpen));
+}
+
 function openDayModal(dateIso) {
   const modal = document.getElementById("day-modal");
   const title = document.getElementById("modal-title");
@@ -1356,16 +1383,23 @@ function openDayModal(dateIso) {
   } else {
     modal.setAttribute("open", "");
   }
+  setModalOpen(true);
 }
 
 function closeDayModal() {
   const modal = document.getElementById("day-modal");
-  if (!modal || !modal.hasAttribute("open")) return;
-  if (typeof modal.close === "function") {
-    modal.close();
-  } else {
-    modal.removeAttribute("open");
+  if (!modal) {
+    setModalOpen(false);
+    return;
   }
+  if (modal.hasAttribute("open")) {
+    if (typeof modal.close === "function") {
+      modal.close();
+    } else {
+      modal.removeAttribute("open");
+    }
+  }
+  setModalOpen(false);
 }
 
 function setupModalInteractions() {
@@ -1723,18 +1757,6 @@ document.addEventListener("DOMContentLoaded", () => {
   setupCalendarInteractions();
   setupModalInteractions();
   setupLocationControls();
-
-  const todayButton = document.getElementById("today-button");
-  if (todayButton) {
-    todayButton.addEventListener("click", () => {
-      const today = getLocalIsoDate(new Date());
-      state.selection = { start: today, end: today };
-      setCalendarMonthFromIso(today);
-      updateSelectionSummary();
-      updateRouteForSelection(state.selection);
-      void updateView();
-    });
-  }
 
   const resetButton = document.getElementById("reset-selection");
   if (resetButton) {

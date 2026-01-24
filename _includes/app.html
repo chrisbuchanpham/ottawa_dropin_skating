@@ -83,6 +83,9 @@
     -webkit-overflow-scrolling: touch;
     touch-action: pan-y;
   }
+  body.modal-open {
+    overflow: hidden;
+  }
   a {
     color: var(--link);
   }
@@ -419,6 +422,11 @@
     margin-top: 0.6rem;
     color: var(--muted);
   }
+  .calendar-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.6rem;
+  }
   .filter-title {
     font-weight: 600;
     margin-bottom: 0.4rem;
@@ -464,7 +472,7 @@
     background: transparent;
   }
   .day-modal::backdrop {
-    background: rgba(10, 16, 28, 0.55);
+    background: rgba(0, 0, 0, 0);
   }
   .modal-content {
     background: var(--card);
@@ -754,10 +762,6 @@
         Drag across days to select a range. Results update below the calendar.
       </div>
     </div>
-    <div class="controls-actions">
-      <button id="today-button" class="secondary-button" type="button">Today</button>
-      <button id="reset-selection" class="secondary-button" type="button">Reset selection</button>
-    </div>
   </div>
 
   <label>Activity type</label>
@@ -820,6 +824,9 @@
       <span class="legend-item"><span class="legend-swatch density-4"></span> Most sessions</span>
     </div>
     <div id="calendar-status" class="calendar-status"></div>
+    <div class="calendar-actions">
+      <button id="reset-selection" class="secondary-button" type="button">Reset selection</button>
+    </div>
   </div>
 </div>
 
