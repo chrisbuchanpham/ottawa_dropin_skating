@@ -223,6 +223,9 @@
     align-items: center;
     gap: 0.6rem 1rem;
   }
+  .map-actions {
+    justify-content: space-between;
+  }
   .inline-control {
     display: inline-flex;
     align-items: center;
@@ -247,11 +250,35 @@
     width: min(100%, 520px);
     aspect-ratio: 4 / 3;
     height: auto;
-    margin: 0 auto;
+    margin: 0;
     border-radius: 12px;
     border: 1px solid var(--border);
     overflow: hidden;
     background: var(--table-head);
+  }
+  .map-modal {
+    border: none;
+    border-radius: 16px;
+    padding: 0;
+    width: min(96vw, 1200px);
+    height: 90vh;
+    background: transparent;
+  }
+  .map-modal::backdrop {
+    background: rgba(0, 0, 0, 0);
+  }
+  .map-modal .modal-content {
+    height: 90vh;
+    max-height: 90vh;
+  }
+  .map-modal-body {
+    height: calc(100% - 3rem);
+  }
+  .map-modal .location-map {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    aspect-ratio: auto;
   }
   .location-status {
     min-height: 1rem;
@@ -546,8 +573,8 @@
   }
   .results-table th:nth-child(1),
   .results-table td:nth-child(1) {
-    width: 180px;
-    white-space: nowrap;
+    width: 200px;
+    white-space: normal;
   }
   .results-table th:nth-child(2),
   .results-table td:nth-child(2),
@@ -782,11 +809,14 @@
 
   <label>Location filter <span class="hint">(local only, nothing saved to a server)</span></label>
   <div class="location-controls">
-    <div class="location-row">
+    <div class="location-row map-actions">
       <button id="use-location" class="secondary-button" type="button">Use my location</button>
+      <button id="expand-map" class="secondary-button" type="button">Expand map</button>
       <span id="location-status" class="hint location-status"></span>
     </div>
-    <div class="location-map" id="location-map"></div>
+    <div id="location-map-wrapper">
+      <div class="location-map" id="location-map"></div>
+    </div>
     <div class="hint">Click the map to set a custom location.</div>
     <div class="location-row">
       <div class="distance-control">
@@ -853,6 +883,16 @@
     <a id="modal-download" href="#" style="display: none">Download CSV</a>
     <div id="modal-neighbourhood-filter" class="controls" style="display: none"></div>
     <div id="modal-results"></div>
+  </div>
+</dialog>
+
+<dialog id="map-modal" class="map-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title">Select a location</div>
+      <button id="map-modal-close" class="secondary-button" type="button">Close</button>
+    </div>
+    <div id="map-modal-content" class="map-modal-body"></div>
   </div>
 </dialog>
 

@@ -808,6 +808,8 @@ const state = {
   dragMoved: false,
   dragShift: false,
   previewRange: null,
+  activePointerId: null,
+  calendarGrid: null,
   currentLocation: null,
   mapLocation: null,
   locationSource: null,
@@ -819,6 +821,7 @@ const state = {
   distanceCacheKey: "",
   mapInstance: null,
   mapMarker: null,
+  mapHome: null,
 };
 
 function ensureTrailingSlash(path) {
@@ -1342,12 +1345,22 @@ function updateHistory(method, stateObj, url) {
 }
 
 function resetDragState() {
+  if (state.calendarGrid && state.activePointerId !== null) {
+    try {
+      if (state.calendarGrid.hasPointerCapture(state.activePointerId)) {
+        state.calendarGrid.releasePointerCapture(state.activePointerId);
+      }
+    } catch (error) {
+      // Ignore capture errors.
+    }
+  }
   state.dragging = false;
   state.dragStart = null;
   state.dragEnd = null;
   state.dragMoved = false;
   state.dragShift = false;
   state.previewRange = null;
+  state.activePointerId = null;
 }
 
 function setModalOpen(isOpen) {
@@ -1462,12 +1475,7 @@ function finalizeDrag() {
   const end = state.dragEnd;
   const moved = state.dragMoved;
   const shiftKey = state.dragShift;
-  state.dragging = false;
-  state.dragStart = null;
-  state.dragEnd = null;
-  state.dragMoved = false;
-  state.dragShift = false;
-  state.previewRange = null;
+  resetDragState();
 
   if (!start) return;
   if (!moved) {
@@ -1485,6 +1493,7 @@ function finalizeDrag() {
 function setupCalendarInteractions() {
   const grid = document.getElementById("calendar-grid");
   if (!grid) return;
+  state.calendarGrid = grid;
 
   grid.addEventListener("pointerdown", (event) => {
     const cell = event.target.closest(".calendar-day");
@@ -1498,6 +1507,7 @@ function setupCalendarInteractions() {
     state.dragMoved = false;
     state.dragShift = event.shiftKey;
     state.previewRange = normalizeRange(iso, iso);
+    state.activePointerId = event.pointerId;
     applyPreviewHighlight();
     updateSelectionSummary();
     grid.setPointerCapture(event.pointerId);
@@ -1524,8 +1534,7 @@ function setupCalendarInteractions() {
 
   grid.addEventListener("pointercancel", () => {
     if (!state.dragging) return;
-    state.dragging = false;
-    state.previewRange = null;
+    resetDragState();
     updateSelectionSummary();
     renderCalendarView();
   });
@@ -1715,6 +1724,55 @@ function setupLocationControls() {
   }
 
   const mapElement = document.getElementById("location-map");
+  const mapWrapper = document.getElementById("location-map-wrapper");
+  const mapModal = document.getElementById("map-modal");
+  const mapModalContent = document.getElementById("map-modal-content");
+  const mapModalClose = document.getElementById("map-modal-close");
+  const expandMap = document.getElementById("expand-map");
+
+  const closeMapModal = () => {
+    if (!mapModal) return;
+    if (mapElement && state.mapHome) {
+      state.mapHome.appendChild(mapElement);
+    }
+    if (typeof mapModal.close === "function") {
+      mapModal.close();
+    } else {
+      mapModal.removeAttribute("open");
+    }
+    setModalOpen(false);
+    if (state.mapInstance) {
+      state.mapInstance.invalidateSize();
+    }
+  };
+
+  if (expandMap && mapModal && mapModalContent && mapElement) {
+    state.mapHome = mapWrapper || mapElement.parentElement;
+    expandMap.addEventListener("click", () => {
+      if (mapModalContent) {
+        mapModalContent.appendChild(mapElement);
+      }
+      if (typeof mapModal.showModal === "function") {
+        mapModal.showModal();
+      } else {
+        mapModal.setAttribute("open", "");
+      }
+      setModalOpen(true);
+      if (state.mapInstance) {
+        state.mapInstance.invalidateSize();
+      }
+    });
+    if (mapModalClose) {
+      mapModalClose.addEventListener("click", closeMapModal);
+    }
+    mapModal.addEventListener("click", (event) => {
+      if (event.target === mapModal) {
+        closeMapModal();
+      }
+    });
+    mapModal.addEventListener("cancel", closeMapModal);
+  }
+
   if (mapElement && typeof L !== "undefined") {
     const defaultCenter = [45.4215, -75.6972];
     state.mapInstance = L.map(mapElement, { scrollWheelZoom: true }).setView(defaultCenter, 11);
