@@ -431,17 +431,19 @@ function buildNeighbourhoodOrder(rows, facilities) {
   const longitudes = {};
   for (const facility of facilities) {
     const neighbourhood = detectNeighbourhood(facility);
-    if (typeof facility.longitude === "number") {
+    const coords = normalizeLatLon(facility.latitude, facility.longitude);
+    if (coords.longitude !== null) {
       if (!longitudes[neighbourhood]) {
         longitudes[neighbourhood] = [];
       }
-      longitudes[neighbourhood].push(facility.longitude);
+      longitudes[neighbourhood].push(coords.longitude);
     }
   }
   for (const row of rows) {
-    if (typeof row.facility_longitude === "number") {
+    const coords = normalizeLatLon(row.facility_latitude, row.facility_longitude);
+    if (coords.longitude !== null) {
       const list = longitudes[row.neighbourhood] || [];
-      list.push(row.facility_longitude);
+      list.push(coords.longitude);
       longitudes[row.neighbourhood] = list;
     }
   }
@@ -938,6 +940,18 @@ function toNumber(value) {
   return Number.isFinite(num) ? num : null;
 }
 
+function normalizeLatLon(latitude, longitude) {
+  const lat = toNumber(latitude);
+  const lon = toNumber(longitude);
+  if (lat === null || lon === null) {
+    return { latitude: lat, longitude: lon };
+  }
+  if (lat < 0 && lon > 0) {
+    return { latitude: lon, longitude: lat };
+  }
+  return { latitude: lat, longitude: lon };
+}
+
 function getActiveLocation() {
   if (state.locationSource === "current" && state.currentLocation) {
     return {
@@ -986,8 +1000,9 @@ function computeDistanceKm(lat1, lon1, lat2, lon2) {
 
 function ensureRowDistance(row, location, cacheKey) {
   if (row.distance_key === cacheKey && row.distance_km !== undefined) return row.distance_km;
-  const lat = toNumber(row.facility_latitude);
-  const lon = toNumber(row.facility_longitude);
+  const coords = normalizeLatLon(row.facility_latitude, row.facility_longitude);
+  const lat = coords.latitude;
+  const lon = coords.longitude;
   if (lat === null || lon === null) {
     row.distance_km = null;
     row.distance_key = cacheKey;
