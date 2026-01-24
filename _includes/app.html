@@ -57,10 +57,10 @@
     --link-hover: #244b72;
     --table-head: #f6f8fa;
     --range-bg: #eef3fa;
-    --density-1: #fff4cc;
-    --density-2: #ffd88a;
-    --density-3: #f4b24e;
-    --density-4: #cf7a1f;
+    --density-1: #f6ea41;
+    --density-2: #f4b46d;
+    --density-3: #f27e9a;
+    --density-4: #f048c6;
   }
   [data-theme="dark"] {
     --bg: #0f1216;
@@ -72,10 +72,10 @@
     --link-hover: #b1c9ff;
     --table-head: #1b222b;
     --range-bg: #1a2330;
-    --density-1: #3b2a12;
-    --density-2: #5a3c18;
-    --density-3: #8a5a1c;
-    --density-4: #f2b44c;
+    --density-1: #f6ea41;
+    --density-2: #f4b46d;
+    --density-3: #f27e9a;
+    --density-4: #f048c6;
   }
   body {
     background: var(--bg);
@@ -240,36 +240,13 @@
   .distance-control input[type="range"] {
     width: 100%;
   }
-  .location-inputs {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 0.6rem;
-    align-items: end;
-  }
-  .location-field label {
-    margin-top: 0;
-    font-weight: 600;
-    font-size: 0.85rem;
-  }
-  .saved-locations {
-    display: grid;
-    gap: 0.5rem;
-  }
-  .saved-location {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.6rem;
-    padding: 0.45rem 0.6rem;
+  .location-map {
+    width: 100%;
+    height: 220px;
+    border-radius: 12px;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    overflow: hidden;
     background: var(--table-head);
-  }
-  .saved-location-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
   }
   .location-status {
     min-height: 1rem;
@@ -379,6 +356,16 @@
   .calendar-day.density-3 {
     background: var(--density-3);
     border-color: transparent;
+  }
+  .calendar-day.density-1,
+  .calendar-day.density-2,
+  .calendar-day.density-3 {
+    color: #1e1f22;
+  }
+  .calendar-day.density-1 .session-count,
+  .calendar-day.density-2 .session-count,
+  .calendar-day.density-3 .session-count {
+    color: rgba(30, 31, 34, 0.7);
   }
   .calendar-day.density-4 {
     background: var(--density-4);
@@ -669,10 +656,10 @@
     --link-hover: #1a4f8a;
     --table-head: rgba(15, 23, 42, 0.07);
     --range-bg: #dcecff;
-    --density-1: #fff4cc;
-    --density-2: #ffd88a;
-    --density-3: #f4b24e;
-    --density-4: #cf7a1f;
+    --density-1: #f6ea41;
+    --density-2: #f4b46d;
+    --density-3: #f27e9a;
+    --density-4: #f048c6;
   }
   [data-theme="dark"] {
     --bg: #0b1118;
@@ -685,10 +672,10 @@
     --link-hover: #b7d7ff;
     --table-head: rgba(148, 163, 184, 0.12);
     --range-bg: #1c2d42;
-    --density-1: #3b2a12;
-    --density-2: #5a3c18;
-    --density-3: #8a5a1c;
-    --density-4: #f2b44c;
+    --density-1: #f6ea41;
+    --density-2: #f4b46d;
+    --density-3: #f27e9a;
+    --density-4: #f048c6;
   }
   body {
     font-family: "Atkinson Hyperlegible", "Verdana", "Trebuchet MS", "Segoe UI", sans-serif;
@@ -791,46 +778,20 @@
   <div class="location-controls">
     <div class="location-row">
       <button id="use-location" class="secondary-button" type="button">Use my location</button>
-      <label class="inline-control">
-        <input type="checkbox" id="include-current-location" />
-        Include current location
-      </label>
       <span id="location-status" class="hint location-status"></span>
     </div>
+    <div class="location-map" id="location-map"></div>
+    <div class="hint">Click the map to set a custom location.</div>
     <div class="location-row">
       <div class="distance-control">
         <div>Max distance: <span id="distance-value">No limit</span></div>
         <input id="distance-range" type="range" min="1" max="50" value="15" />
+        <div class="hint">Slide to the end for no limit.</div>
       </div>
-      <label class="inline-control">
-        <input type="checkbox" id="distance-unlimited" checked />
-        No limit
-      </label>
       <label class="inline-control">
         <input type="checkbox" id="sort-distance" />
         Sort neighbourhoods by nearest
       </label>
-    </div>
-    <div class="location-inputs">
-      <div class="location-field">
-        <label for="location-label">Label</label>
-        <input id="location-label" type="text" placeholder="Home, work, school" />
-      </div>
-      <div class="location-field">
-        <label for="location-lat">Latitude</label>
-        <input id="location-lat" type="number" step="0.0001" placeholder="45.4215" />
-      </div>
-      <div class="location-field">
-        <label for="location-lng">Longitude</label>
-        <input id="location-lng" type="number" step="0.0001" placeholder="-75.6972" />
-      </div>
-      <div class="location-field">
-        <button id="add-location" class="secondary-button" type="button">Save location</button>
-      </div>
-    </div>
-    <div class="filter-title">Saved locations</div>
-    <div id="saved-locations" class="saved-locations">
-      <div class="hint">No saved locations yet.</div>
     </div>
   </div>
 </div>
@@ -912,4 +873,9 @@
   });
 </script>
 
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="ottawa_dropin_skating.js"></script>
