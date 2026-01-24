@@ -1149,6 +1149,7 @@ async function updateView() {
   const calendarStatus = document.getElementById("calendar-status");
   if (status) status.textContent = "Loading data...";
   if (calendarStatus) calendarStatus.textContent = "Loading data...";
+  closeDayModal();
 
   try {
     await ensureData();
@@ -1170,9 +1171,80 @@ function updateHistory(method, stateObj, url) {
   }
 }
 
+function openDayModal(dateIso) {
+  const modal = document.getElementById("day-modal");
+  const title = document.getElementById("modal-title");
+  const status = document.getElementById("modal-status");
+  const results = document.getElementById("modal-results");
+  const filter = document.getElementById("modal-neighbourhood-filter");
+  const downloadLink = document.getElementById("modal-download");
+  if (!modal || !title || !status || !results) return;
+
+  const rows = state.rowsByDate[dateIso] || [];
+  const dates = iterDates(dateIso, dateIso);
+  title.textContent = `Sessions on ${formatLongDate(dateIso)}`;
+  status.textContent = "";
+  results.innerHTML = "";
+  if (downloadLink) downloadLink.style.display = "none";
+  if (filter) filter.style.display = "none";
+
+  if (!rows.length) {
+    status.textContent = "No matching sessions for this day.";
+  } else {
+    const orderMap = buildNeighbourhoodOrder(rows, state.data.facility || []);
+    sortRows(rows, orderMap);
+    const applySelection = (filteredRows) => {
+      const label = state.source === "remote" ? " (fallback data)" : "";
+      status.textContent = `Found ${filteredRows.length} sessions.${label}`;
+      renderTable(filteredRows, orderMap, results);
+      if (downloadLink) updateDownloadLink(filteredRows, orderMap, dates, downloadLink);
+    };
+    if (!filter) {
+      applySelection(rows);
+    } else {
+      renderNeighbourhoodFilter(rows, orderMap, filter, applySelection);
+    }
+  }
+
+  if (typeof modal.showModal === "function") {
+    modal.showModal();
+  } else {
+    modal.setAttribute("open", "");
+  }
+}
+
+function closeDayModal() {
+  const modal = document.getElementById("day-modal");
+  if (!modal || !modal.hasAttribute("open")) return;
+  if (typeof modal.close === "function") {
+    modal.close();
+  } else {
+    modal.removeAttribute("open");
+  }
+}
+
+function setupModalInteractions() {
+  const modal = document.getElementById("day-modal");
+  const closeButton = document.getElementById("modal-close");
+  if (closeButton) {
+    closeButton.addEventListener("click", closeDayModal);
+  }
+  if (modal) {
+    modal.addEventListener("click", (event) => {
+      if (event.target === modal) {
+        closeDayModal();
+      }
+    });
+    modal.addEventListener("cancel", () => {
+      closeDayModal();
+    });
+  }
+}
+
 function handleDayClick(dateIso, shiftKey) {
   if (!dateIso) return;
   const selection = normalizeRange(state.selection.start, state.selection.end);
+  const isMulti = selection.start && selection.end && selection.start !== selection.end;
   if (shiftKey && selection.start) {
     const range = normalizeRange(selection.start, dateIso);
     state.selection = range;
@@ -1180,6 +1252,10 @@ function handleDayClick(dateIso, shiftKey) {
     updateSelectionSummary();
     updateRouteForSelection(range);
     void updateView();
+    return;
+  }
+  if (isMulti && isIsoInRange(dateIso, selection.start, selection.end)) {
+    openDayModal(dateIso);
     return;
   }
   const range = { start: dateIso, end: dateIso };
@@ -1313,6 +1389,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   updateSelectionSummary();
   setupCalendarInteractions();
+  setupModalInteractions();
 
   const todayButton = document.getElementById("today-button");
   if (todayButton) {

@@ -9,6 +9,7 @@ Live site:
 - Filters for skating, adult hockey (18+), and youth hockey.
 - Time-of-day filters (morning, afternoon, evening).
 - Calendar range selection with results listed below the calendar.
+- Per-day modal detail (with neighbourhood filter) for multi-day ranges.
 - Neighbourhood grouping from west to east.
 - CSV export of the current results.
 
@@ -20,7 +21,8 @@ Live site:
 2. Choose the activity type and time-of-day filters.
 3. Single-day selections keep the calendar visible while listing results below.
 4. Multi-day selections stay on the calendar and list results below it.
-5. Use Download CSV to save the current view.
+5. Click a day inside a multi-day range to open a modal detail list with neighbourhood filter.
+6. Use Download CSV to save the current view.
 
 ## Notes
 - Reservations are inferred from listing text and may change; check the facility listing if unsure.

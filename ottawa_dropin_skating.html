@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Ottawa Drop-in Skating & Hockey</title>
     <style>
-      @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap");
+      @import url("https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap");
       .wrapper {
         width: 100% !important;
         max-width: none !important;
@@ -409,6 +409,48 @@
         border-radius: 12px;
         background: var(--card);
       }
+      .day-modal {
+        border: none;
+        border-radius: 16px;
+        padding: 0;
+        width: min(96vw, 980px);
+        background: transparent;
+      }
+      .day-modal::backdrop {
+        background: rgba(10, 16, 28, 0.55);
+      }
+      .modal-content {
+        background: var(--card);
+        color: var(--text);
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        padding: 1rem 1.2rem 1.2rem;
+        max-height: 80vh;
+        overflow: auto;
+      }
+      .modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 0.6rem;
+      }
+      .modal-title {
+        font-weight: 700;
+        font-size: 1.05rem;
+      }
+      .modal-status {
+        margin-top: 0.35rem;
+        color: var(--muted);
+      }
+      #modal-download {
+        display: inline-block;
+        margin-top: 0.5rem;
+        font-weight: 600;
+      }
+      #modal-results .results-table {
+        margin-bottom: 0;
+      }
       .list-date-label {
         font-weight: 600;
         font-size: 1.1rem;
@@ -564,10 +606,10 @@
         --link-hover: #1a4f8a;
         --table-head: rgba(15, 23, 42, 0.07);
         --range-bg: #dcecff;
-        --density-1: #e8edf5;
-        --density-2: #c2cfdd;
-        --density-3: #8ea5bd;
-        --density-4: #4f6b8a;
+        --density-1: #e5eef8;
+        --density-2: #b9cce3;
+        --density-3: #7fa0c7;
+        --density-4: #3a557a;
       }
       [data-theme="dark"] {
         --bg: #0b1118;
@@ -580,13 +622,13 @@
         --link-hover: #b7d7ff;
         --table-head: rgba(148, 163, 184, 0.12);
         --range-bg: #1c2d42;
-        --density-1: #1a2532;
-        --density-2: #243447;
-        --density-3: #314766;
-        --density-4: #4b6fa0;
+        --density-1: #22334a;
+        --density-2: #2f4a70;
+        --density-3: #4f79b3;
+        --density-4: #82b6ff;
       }
       body {
-        font-family: "Space Grotesk", "Trebuchet MS", "Segoe UI", sans-serif;
+        font-family: "Atkinson Hyperlegible", "Verdana", "Trebuchet MS", "Segoe UI", sans-serif;
         color: var(--text);
         background:
           radial-gradient(1200px circle at 10% -10%, rgba(156, 198, 255, 0.55), transparent 55%),
@@ -721,6 +763,19 @@
       <div id="neighbourhood-filter" class="controls" style="display: none"></div>
       <div id="results"></div>
     </div>
+
+    <dialog id="day-modal" class="day-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div id="modal-title" class="modal-title"></div>
+          <button id="modal-close" class="secondary-button" type="button">Close</button>
+        </div>
+        <div id="modal-status" class="modal-status"></div>
+        <a id="modal-download" href="#" style="display: none">Download CSV</a>
+        <div id="modal-neighbourhood-filter" class="controls" style="display: none"></div>
+        <div id="modal-results"></div>
+      </div>
+    </dialog>
 
     <script>
       document.addEventListener("DOMContentLoaded", () => {
