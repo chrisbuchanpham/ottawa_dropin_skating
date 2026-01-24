@@ -1,5 +1,5 @@
 <style>
-  @import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Space+Grotesk:wght@400;500;600&display=swap");
+  @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap");
   .wrapper {
     width: 100% !important;
     max-width: none !important;
@@ -601,20 +601,20 @@
   }
 
   :root {
-    --bg: #e9f2fb;
-    --bg-alt: #f6efe6;
-    --text: #101827;
-    --muted: #536076;
-    --card: rgba(255, 255, 255, 0.9);
-    --border: rgba(16, 24, 39, 0.12);
-    --link: #0f5ea8;
-    --link-hover: #0c4a86;
-    --table-head: rgba(15, 23, 42, 0.06);
-    --range-bg: #dff0ff;
-    --density-1: #e0f0ff;
-    --density-2: #bfdcff;
-    --density-3: #7fb6f0;
-    --density-4: #0f5ea8;
+    --bg: #eef3f9;
+    --bg-alt: #f7f1e7;
+    --text: #141821;
+    --muted: #3f4a5a;
+    --card: rgba(255, 255, 255, 0.92);
+    --border: rgba(20, 24, 33, 0.14);
+    --link: #1f5fa8;
+    --link-hover: #1a4f8a;
+    --table-head: rgba(15, 23, 42, 0.07);
+    --range-bg: #dcecff;
+    --density-1: #dff2ff;
+    --density-2: #6fb7f3;
+    --density-3: #ffb066;
+    --density-4: #f05a5a;
   }
   [data-theme="dark"] {
     --bg: #0b1118;
@@ -628,12 +628,13 @@
     --table-head: rgba(148, 163, 184, 0.12);
     --range-bg: #1c2d42;
     --density-1: #1c2e44;
-    --density-2: #294664;
-    --density-3: #3b608a;
-    --density-4: #7fb6f0;
+    --density-2: #2f5580;
+    --density-3: #b87a48;
+    --density-4: #f07a7a;
   }
   body {
     font-family: "Space Grotesk", "Trebuchet MS", "Segoe UI", sans-serif;
+    color: var(--text);
     background:
       radial-gradient(1200px circle at 10% -10%, rgba(173, 216, 255, 0.7), transparent 55%),
       radial-gradient(900px circle at 90% -20%, rgba(255, 214, 170, 0.4), transparent 50%),
@@ -644,15 +645,6 @@
       radial-gradient(1200px circle at 10% -10%, rgba(63, 110, 170, 0.35), transparent 55%),
       radial-gradient(900px circle at 90% -20%, rgba(70, 99, 140, 0.25), transparent 50%),
       linear-gradient(180deg, #0b1118 0%, #101824 60%, #141c27 100%);
-  }
-  h1,
-  h2,
-  h3,
-  .month-label,
-  .selection-title,
-  .list-date-label {
-    font-family: "Fraunces", "Georgia", serif;
-    letter-spacing: 0.01em;
   }
   .controls,
   .calendar-card,

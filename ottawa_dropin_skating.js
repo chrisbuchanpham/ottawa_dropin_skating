@@ -1399,9 +1399,10 @@ function setupCalendarInteractions() {
     grid.setPointerCapture(event.pointerId);
   });
 
-  grid.addEventListener("pointerover", (event) => {
+  grid.addEventListener("pointermove", (event) => {
     if (!state.dragging) return;
-    const cell = event.target.closest(".calendar-day");
+    const target = document.elementFromPoint(event.clientX, event.clientY);
+    const cell = target ? target.closest(".calendar-day") : null;
     if (!cell) return;
     const iso = cell.dataset.date;
     if (!iso || iso === state.dragEnd) return;
