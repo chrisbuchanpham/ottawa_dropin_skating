@@ -808,6 +808,7 @@ const state = {
   dragMoved: false,
   dragShift: false,
   previewRange: null,
+  calendarListenersBound: false,
   currentLocation: null,
   mapLocation: null,
   locationSource: null,
@@ -1480,11 +1481,12 @@ function finalizeDrag() {
 
 function setupCalendarInteractions() {
   const grid = document.getElementById("calendar-grid");
-  if (!grid) return;
+  if (!grid || state.calendarListenersBound) return;
+  state.calendarListenersBound = true;
 
-  grid.addEventListener("pointerdown", (event) => {
+  document.addEventListener("pointerdown", (event) => {
     const cell = event.target.closest(".calendar-day");
-    if (!cell) return;
+    if (!cell || !grid.contains(cell)) return;
     const iso = cell.dataset.date;
     if (!iso) return;
     event.preventDefault();
@@ -1498,11 +1500,11 @@ function setupCalendarInteractions() {
     updateSelectionSummary();
   });
 
-  window.addEventListener("pointermove", (event) => {
+  document.addEventListener("pointermove", (event) => {
     if (!state.dragging) return;
     const target = document.elementFromPoint(event.clientX, event.clientY);
     const cell = target ? target.closest(".calendar-day") : null;
-    if (!cell) return;
+    if (!cell || !grid.contains(cell)) return;
     const iso = cell.dataset.date;
     if (!iso || iso === state.dragEnd) return;
     state.dragEnd = iso;
@@ -1512,20 +1514,16 @@ function setupCalendarInteractions() {
     updateSelectionSummary();
   });
 
-  grid.addEventListener("pointerup", () => {
+  document.addEventListener("pointerup", () => {
     if (!state.dragging) return;
     finalizeDrag();
   });
 
-  grid.addEventListener("pointercancel", () => {
+  document.addEventListener("pointercancel", () => {
     if (!state.dragging) return;
     resetDragState();
     updateSelectionSummary();
     renderCalendarView();
-  });
-
-  window.addEventListener("pointerup", () => {
-    if (state.dragging) finalizeDrag();
   });
 
   grid.addEventListener("keydown", (event) => {
