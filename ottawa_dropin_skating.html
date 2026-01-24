@@ -3,100 +3,842 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Ottawa Drop-in Skating</title>
+    <title>Ottawa Drop-in Skating & Hockey</title>
     <style>
+      @import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Space+Grotesk:wght@400;500;600&display=swap");
+      .wrapper {
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 24px;
+      }
+      .page-header {
+        max-width: none !important;
+      }
+      header {
+        display: block !important;
+        width: 100% !important;
+        float: none !important;
+        position: static !important;
+        margin: 0 0 1rem 0 !important;
+      }
+      header .view {
+        display: none !important;
+      }
+      section {
+        float: none !important;
+        width: 100% !important;
+        max-width: none !important;
+        margin-left: 0;
+      }
+      footer {
+        position: static !important;
+        float: none !important;
+        width: 100% !important;
+        max-width: none !important;
+        clear: both;
+      }
+      footer .container {
+        max-width: none !important;
+      }
+      footer p,
+      footer div,
+      footer ul {
+        max-width: none !important;
+        width: 100% !important;
+      }
+      .footer-extras {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        margin: 0 0 0.6rem;
+      }
       :root {
-        color-scheme: light;
+        --bg: #f7f8fa;
+        --text: #1e1f22;
+        --muted: #5b6470;
+        --card: #ffffff;
+        --border: #e1e4e8;
+        --link: #2b5b8c;
+        --link-hover: #244b72;
+        --table-head: #f6f8fa;
+        --range-bg: #eef3fa;
+        --density-1: #e2ecf8;
+        --density-2: #c5d8f1;
+        --density-3: #9ab7e3;
+        --density-4: #2b5b8c;
+      }
+      [data-theme="dark"] {
+        --bg: #0f1216;
+        --text: #e8ecf1;
+        --muted: #a9b2bf;
+        --card: #151a21;
+        --border: #2a333d;
+        --link: #8db5ff;
+        --link-hover: #b1c9ff;
+        --table-head: #1b222b;
+        --range-bg: #1a2330;
+        --density-1: #233347;
+        --density-2: #2d4460;
+        --density-3: #3a5b7f;
+        --density-4: #5b8bd5;
       }
       body {
-        font-family: "Georgia", "Times New Roman", serif;
-        margin: 24px;
-        color: #1c1c1c;
-        background: linear-gradient(140deg, #f2f4f7, #e9edf2);
+        background: var(--bg);
+        color: var(--text);
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
       }
-      h1 {
-        margin: 0 0 8px;
+      a {
+        color: var(--link);
       }
-      .card {
-        background: #fff;
-        border-radius: 12px;
-        padding: 16px;
-        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
-        margin-bottom: 16px;
+      a:hover {
+        color: var(--link-hover);
       }
-      label {
-        display: block;
-        margin: 12px 0 6px;
-        font-weight: bold;
+      .project-links {
+        display: flex;
+        justify-content: flex-end;
+        margin: 0.5rem 0 0.75rem;
       }
-      input[type="date"],
-      input[type="text"] {
-        width: 100%;
-        padding: 8px;
-        border-radius: 6px;
-        border: 1px solid #c7cdd6;
-      }
-      button {
-        margin-top: 12px;
-        padding: 10px 16px;
-        background: #1f4e79;
-        color: #fff;
-        border: none;
-        border-radius: 6px;
+      .project-links button {
+        padding: 0.4rem 0.7rem;
+        border-radius: 4px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        color: var(--text);
         cursor: pointer;
       }
-      button:hover {
-        background: #173957;
+      .project-links button:hover {
+        background: var(--table-head);
       }
-      #status {
-        margin-top: 8px;
+      @media (max-width: 700px) {
+        .project-links {
+          justify-content: flex-start;
+        }
       }
-      table {
+      .project-footer-link {
+        margin: 0.4rem 0 0.6rem;
+      }
+      .controls {
+        margin: 0.6rem 0 1rem;
+        padding: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--card);
+      }
+      .controls-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1.2rem;
+        flex-wrap: wrap;
+      }
+      .selection-title {
+        font-weight: 600;
+      }
+      .selection-range {
+        font-size: 1.05rem;
+        margin-top: 0.2rem;
+      }
+      .selection-hint {
+        margin-top: 0.35rem;
+      }
+      .controls-actions {
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+      }
+      .controls label {
+        display: block;
+        margin-top: 0.75rem;
+        font-weight: 600;
+      }
+      .secondary-button {
+        padding: 0.35rem 0.7rem;
+        border-radius: 4px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        color: var(--text);
+        cursor: pointer;
+      }
+      .secondary-button:hover {
+        background: var(--table-head);
+      }
+      .controls input[type="date"],
+      .controls input[type="text"] {
         width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 24px;
+        max-width: 420px;
+        padding: 0.4rem 0.5rem;
+        border-radius: 4px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        color: var(--text);
       }
-      th,
-      td {
-        border-bottom: 1px solid #e0e5ec;
-        padding: 6px 8px;
+      .controls button {
+        margin-top: 0.75rem;
+        padding: 0.5rem 0.9rem;
+        border-radius: 4px;
+        border: none;
+        background: var(--link);
+        color: var(--card);
+        cursor: pointer;
+      }
+      .controls button:hover {
+        background: var(--link-hover);
+      }
+      .controls .secondary-button {
+        margin-top: 0;
+        padding: 0.35rem 0.7rem;
+        border: 1px solid var(--border);
+        background: var(--card);
+        color: var(--text);
+      }
+      .controls .secondary-button:hover {
+        background: var(--table-head);
+      }
+      .activity-filter {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem 1.2rem;
+      }
+      .activity-filter label {
+        margin-top: 0.4rem;
+        font-weight: 500;
+      }
+      .time-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem 1.2rem;
+      }
+      .time-filters label {
+        margin-top: 0.4rem;
+        font-weight: 500;
+      }
+      .hint {
+        font-weight: 400;
+        color: var(--muted);
+      }
+      .calendar-view {
+        margin-bottom: 1.5rem;
+      }
+      .calendar-card {
+        padding: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--card);
+      }
+      .calendar-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.8rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.75rem;
+      }
+      .month-label {
+        font-weight: 600;
+        font-size: 1.1rem;
+      }
+      .calendar-weekdays {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 0.4rem;
+        margin-bottom: 0.4rem;
+        font-size: 0.8rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .calendar-weekdays div {
+        text-align: center;
+      }
+      .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 0.4rem;
+        user-select: none;
+        touch-action: pan-y;
+      }
+      .calendar-day {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--card);
+        appearance: none;
+        min-height: 84px;
+        padding: 0.45rem;
         text-align: left;
-        vertical-align: top;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        position: relative;
+        cursor: pointer;
+        color: inherit;
+        font-family: inherit;
+      }
+      .calendar-day:focus-visible {
+        outline: 2px solid var(--link);
+        outline-offset: 2px;
+      }
+      .calendar-day:hover {
+        border-color: var(--link);
+      }
+      .calendar-day.is-selected {
+        box-shadow: inset 0 0 0 2px var(--link);
+        background: var(--range-bg);
+      }
+      .calendar-day.is-preview {
+        box-shadow: inset 0 0 0 2px var(--link);
+        border-style: dashed;
+      }
+      .calendar-day.is-today::after {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--link);
+        position: absolute;
+        top: 8px;
+        right: 8px;
+      }
+      .calendar-day.outside-month {
+        color: var(--muted);
+        background: var(--bg);
+      }
+      .calendar-day.outside-month.is-selected {
+        color: var(--text);
+        background: var(--range-bg);
+      }
+      .calendar-day.density-1 {
+        background: var(--density-1);
+        border-color: transparent;
+      }
+      .calendar-day.density-2 {
+        background: var(--density-2);
+        border-color: transparent;
+      }
+      .calendar-day.density-3 {
+        background: var(--density-3);
+        border-color: transparent;
+      }
+      .calendar-day.density-4 {
+        background: var(--density-4);
+        border-color: transparent;
+        color: #ffffff;
+      }
+      .calendar-day.density-4 .session-count {
+        color: rgba(255, 255, 255, 0.9);
+      }
+      .day-number {
+        font-weight: 600;
         font-size: 0.95rem;
       }
-      th {
-        background: #f7f9fc;
+      .session-count {
+        font-size: 0.78rem;
+        color: var(--muted);
+      }
+      .calendar-legend {
+        display: flex;
+        gap: 0.8rem;
+        flex-wrap: wrap;
+        margin-top: 0.6rem;
+        font-size: 0.85rem;
+        color: var(--muted);
+        align-items: center;
+      }
+      .legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+      .legend-swatch {
+        width: 16px;
+        height: 10px;
+        border-radius: 999px;
+        display: inline-block;
+      }
+      .legend-swatch.density-1 {
+        background: var(--density-1);
+      }
+      .legend-swatch.density-2 {
+        background: var(--density-2);
+      }
+      .legend-swatch.density-3 {
+        background: var(--density-3);
+      }
+      .legend-swatch.density-4 {
+        background: var(--density-4);
+      }
+      .calendar-status {
+        margin-top: 0.6rem;
+        color: var(--muted);
+      }
+      .filter-title {
+        font-weight: 600;
+        margin-bottom: 0.4rem;
+      }
+      .neighbourhood-filter-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+      .filter-chip {
+        border: 1px solid var(--border);
+        background: var(--card);
+        color: var(--text);
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+      .filter-chip.active {
+        background: var(--link);
+        color: var(--card);
+        border-color: var(--link);
+      }
+      .list-header {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        flex-wrap: wrap;
+        margin: 1rem 0 0.6rem;
+      }
+      .list-date-label {
+        font-weight: 600;
+        font-size: 1.1rem;
+      }
+      #status {
+        margin-top: 0.5rem;
       }
       #download {
         display: inline-block;
-        margin-top: 8px;
-        color: #1f4e79;
-        text-decoration: none;
-        font-weight: bold;
+        margin-top: 0.5rem;
+        font-weight: 600;
       }
-      #download:hover {
-        text-decoration: underline;
+      .results-table {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse;
+        margin-bottom: 1.5rem;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+        touch-action: pan-y;
+      }
+      .results-table th,
+      .results-table td {
+        border-bottom: 1px solid var(--border);
+        padding: 0.35rem 0.5rem;
+        vertical-align: top;
+        word-break: normal;
+        color: var(--text);
+      }
+      .results-table th {
+        background: var(--table-head);
+        font-weight: 600;
+      }
+      .results-table th:nth-child(1),
+      .results-table td:nth-child(1) {
+        width: 110px;
+        white-space: nowrap;
+      }
+      .results-table th:nth-child(2),
+      .results-table td:nth-child(2),
+      .results-table th:nth-child(3),
+      .results-table td:nth-child(3) {
+        width: 70px;
+        white-space: nowrap;
+      }
+      .results-table th:nth-child(4),
+      .results-table td:nth-child(4) {
+        width: 120px;
+        white-space: nowrap;
+      }
+      .results-table th:nth-child(5),
+      .results-table td:nth-child(5) {
+        width: 180px;
+      }
+      .results-table th:nth-child(6),
+      .results-table td:nth-child(6) {
+        width: 220px;
+      }
+      .results-table th:nth-child(7),
+      .results-table td:nth-child(7) {
+        width: auto;
+        overflow-wrap: anywhere;
+      }
+      .neighbourhood-title {
+        margin-top: 1.5rem;
+        color: var(--text);
+      }
+      .day-modal {
+        border: none;
+        border-radius: 12px;
+        padding: 0;
+        width: min(92vw, 560px);
+        background: transparent;
+      }
+      .day-modal::backdrop {
+        background: rgba(0, 0, 0, 0.45);
+      }
+      .modal-content {
+        background: var(--card);
+        color: var(--text);
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        padding: 1rem 1.2rem;
+      }
+      .modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 0.6rem;
+      }
+      .modal-title {
+        font-weight: 600;
+        font-size: 1.05rem;
+      }
+      .modal-body {
+        max-height: 60vh;
+        overflow: auto;
+      }
+      .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 0.8rem;
+      }
+      .location-card {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 0.6rem 0.75rem;
+        margin-bottom: 0.6rem;
+        background: var(--card);
+      }
+      .location-card:last-child {
+        margin-bottom: 0;
+      }
+      .location-name {
+        font-weight: 600;
+        margin-bottom: 0.2rem;
+      }
+      .location-meta {
+        font-size: 0.88rem;
+        color: var(--muted);
+      }
+      .location-sessions {
+        margin: 0.4rem 0 0;
+        padding-left: 1.1rem;
+      }
+      .ad-inline {
+        margin: 1rem 0 0.5rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      .ad-inline img {
+        width: 18px;
+        height: 18px;
+      }
+      @media (max-width: 700px) {
+        .wrapper {
+          padding: 0 12px;
+        }
+        .controls-top {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .controls-actions {
+          width: 100%;
+        }
+        .activity-filter,
+        .time-filters,
+        .neighbourhood-filter-list {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+        .calendar-day {
+          min-height: 70px;
+          padding: 0.35rem;
+        }
+        .calendar-weekdays {
+          font-size: 0.7rem;
+        }
+        .list-header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+        .results-table {
+          table-layout: auto;
+        }
+        .results-table thead {
+          display: none;
+        }
+        .results-table,
+        .results-table tbody,
+        .results-table tr,
+        .results-table td {
+          display: block;
+          width: 100%;
+        }
+        .results-table tr {
+          margin-bottom: 1rem;
+          border: 1px solid var(--border);
+          border-radius: 6px;
+          padding: 0.4rem 0.5rem;
+          background: var(--card);
+        }
+        .results-table td {
+          display: flex;
+          gap: 0.6rem;
+          padding: 0.35rem 0;
+          border-bottom: 1px solid var(--border);
+        }
+        .results-table td:last-child {
+          border-bottom: none;
+        }
+        .results-table td::before {
+          content: attr(data-label);
+          font-weight: 600;
+          width: 120px;
+          flex: 0 0 auto;
+        }
+      }
+      :root {
+        --bg: #e9f2fb;
+        --bg-alt: #f6efe6;
+        --text: #101827;
+        --muted: #536076;
+        --card: rgba(255, 255, 255, 0.9);
+        --border: rgba(16, 24, 39, 0.12);
+        --link: #0f5ea8;
+        --link-hover: #0c4a86;
+        --table-head: rgba(15, 23, 42, 0.06);
+        --range-bg: #dff0ff;
+        --density-1: #e0f0ff;
+        --density-2: #bfdcff;
+        --density-3: #7fb6f0;
+        --density-4: #0f5ea8;
+      }
+      [data-theme="dark"] {
+        --bg: #0b1118;
+        --bg-alt: #141c27;
+        --text: #eef3fa;
+        --muted: #9aa7bd;
+        --card: rgba(20, 27, 38, 0.92);
+        --border: rgba(148, 163, 184, 0.2);
+        --link: #8dc1ff;
+        --link-hover: #b7d7ff;
+        --table-head: rgba(148, 163, 184, 0.12);
+        --range-bg: #1c2d42;
+        --density-1: #1c2e44;
+        --density-2: #294664;
+        --density-3: #3b608a;
+        --density-4: #7fb6f0;
+      }
+      body {
+        font-family: "Space Grotesk", "Trebuchet MS", "Segoe UI", sans-serif;
+        background:
+          radial-gradient(1200px circle at 10% -10%, rgba(173, 216, 255, 0.7), transparent 55%),
+          radial-gradient(900px circle at 90% -20%, rgba(255, 214, 170, 0.4), transparent 50%),
+          linear-gradient(180deg, #f9fbff 0%, var(--bg) 60%, var(--bg-alt) 100%);
+      }
+      [data-theme="dark"] body {
+        background:
+          radial-gradient(1200px circle at 10% -10%, rgba(63, 110, 170, 0.35), transparent 55%),
+          radial-gradient(900px circle at 90% -20%, rgba(70, 99, 140, 0.25), transparent 50%),
+          linear-gradient(180deg, #0b1118 0%, #101824 60%, #141c27 100%);
+      }
+      h1,
+      h2,
+      h3,
+      .month-label,
+      .selection-title,
+      .list-date-label {
+        font-family: "Fraunces", "Georgia", serif;
+        letter-spacing: 0.01em;
+      }
+      .controls,
+      .calendar-card,
+      .list-view {
+        border-radius: 16px;
+        box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+        backdrop-filter: blur(8px);
+        animation: liftIn 0.45s ease-out both;
+      }
+      .calendar-card {
+        animation-delay: 0.05s;
+      }
+      .list-view {
+        animation-delay: 0.08s;
+      }
+      .secondary-button,
+      .controls button {
+        border-radius: 999px;
+      }
+      .calendar-day {
+        border-radius: 14px;
+        transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+      }
+      .calendar-day:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(15, 23, 42, 0.15);
+      }
+      .calendar-day.density-4 {
+        color: #f7fbff;
+      }
+      .calendar-weekdays {
+        font-weight: 600;
+        letter-spacing: 0.12em;
+      }
+      .calendar-legend {
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.72rem;
+      }
+      .day-modal[open] .modal-content {
+        animation: modalPop 0.2s ease-out;
+      }
+      @keyframes liftIn {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @keyframes modalPop {
+        from {
+          opacity: 0;
+          transform: translateY(8px) scale(0.98);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
       }
     </style>
   </head>
   <body>
-    <h1>Ottawa Drop-in Skating</h1>
-    <div class="card">
-      <label for="start-date">Start date</label>
-      <input id="start-date" type="date" />
-
-      <label for="end-date">End date (optional)</label>
-      <input id="end-date" type="date" />
-
-      <label for="keywords">Keywords (comma-separated)</label>
-      <input id="keywords" type="text" />
-
-      <button id="search-button">Search</button>
-      <div id="status"></div>
-      <a id="download" href="#" style="display: none">Download CSV</a>
+    <div class="project-links">
+      <button id="theme-toggle" type="button">Dark mode</button>
     </div>
 
-    <div id="results" class="card"></div>
+    <div class="controls">
+      <div class="controls-top">
+        <div>
+          <div class="selection-title">Selected dates</div>
+          <div id="selection-range" class="selection-range"></div>
+          <div class="selection-hint hint">
+            Drag across days to select a range. Click a single day for the list view. In multi-day
+            ranges, click a day to see locations.
+          </div>
+        </div>
+        <div class="controls-actions">
+          <button id="today-button" class="secondary-button" type="button">Today</button>
+          <button id="reset-selection" class="secondary-button" type="button">Reset selection</button>
+        </div>
+      </div>
+
+      <label>Activity type</label>
+      <div class="activity-filter">
+        <label><input type="radio" name="activity-filter" value="skating" checked /> Skating</label>
+        <label><input type="radio" name="activity-filter" value="adult-hockey" /> Adult hockey (18+)</label>
+        <label><input type="radio" name="activity-filter" value="youth-hockey" /> Youth hockey</label>
+      </div>
+
+      <label>Time of day <span class="hint">(all timeslots by default)</span></label>
+      <div class="time-filters">
+        <label><input type="checkbox" name="time-filter" value="morning" /> Morning (before noon)</label>
+        <label><input type="checkbox" name="time-filter" value="afternoon" /> Afternoon (noon - 6pm)</label>
+        <label><input type="checkbox" name="time-filter" value="evening" /> Evening (after 6pm)</label>
+      </div>
+    </div>
+
+    <div id="calendar-view" class="calendar-view">
+      <div class="calendar-card">
+        <div class="calendar-toolbar">
+          <button id="prev-month" class="secondary-button" type="button">Previous</button>
+          <div id="month-label" class="month-label"></div>
+          <button id="next-month" class="secondary-button" type="button">Next</button>
+        </div>
+        <div class="calendar-weekdays">
+          <div>Mon</div>
+          <div>Tue</div>
+          <div>Wed</div>
+          <div>Thu</div>
+          <div>Fri</div>
+          <div>Sat</div>
+          <div>Sun</div>
+        </div>
+        <div id="calendar-grid" class="calendar-grid"></div>
+        <div class="calendar-legend">
+          <span class="legend-item"><span class="legend-swatch density-1"></span> Few sessions</span>
+          <span class="legend-item"><span class="legend-swatch density-2"></span> Some sessions</span>
+          <span class="legend-item"><span class="legend-swatch density-3"></span> Busy</span>
+          <span class="legend-item"><span class="legend-swatch density-4"></span> Very busy</span>
+        </div>
+        <div id="calendar-status" class="calendar-status"></div>
+      </div>
+    </div>
+
+    <div id="list-view" class="list-view" hidden>
+      <div class="list-header">
+        <button id="back-to-calendar" class="secondary-button" type="button">
+          Back to calendar
+        </button>
+        <div id="list-date-label" class="list-date-label"></div>
+      </div>
+
+      <div id="status"></div>
+      <a id="download" href="#" style="display: none">Download CSV</a>
+      <div id="neighbourhood-filter" class="controls" style="display: none"></div>
+      <div id="results"></div>
+    </div>
+
+    <dialog id="day-modal" class="day-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div id="modal-title" class="modal-title"></div>
+          <button id="modal-close" class="secondary-button" type="button">Close</button>
+        </div>
+        <div id="modal-body" class="modal-body"></div>
+        <div class="modal-actions">
+          <button id="modal-view-list" class="secondary-button" type="button">
+            View full list
+          </button>
+        </div>
+      </div>
+    </dialog>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const footer = document.querySelector("footer");
+        if (!footer) return;
+
+        const container = document.createElement("div");
+        container.className = "footer-extras";
+
+        const hudson = document.createElement("div");
+        hudson.className = "ad-inline";
+        hudson.innerHTML =
+          '<img src="https://www.withhudson.ai/hudson-logo.svg" alt="Hudson logo" />' +
+          '<span>Hudson AI: a smart travel companion.</span>' +
+          '<a href="https://www.withhudson.ai/" target="_blank" rel="noopener">withhudson.ai</a>';
+
+        const project = document.createElement("div");
+        project.className = "project-footer-link";
+        project.innerHTML =
+          '<a href="https://github.com/chrisbuchanpham/ottawa_dropin_skating">View the Project on GitHub</a>';
+
+        container.appendChild(hudson);
+        container.appendChild(project);
+        footer.prepend(container);
+      });
+    </script>
 
     <script src="ottawa_dropin_skating.js"></script>
   </body>

@@ -774,71 +774,668 @@ function renderNeighbourhoodFilter(rows, orderMap, container, onSelect) {
   setActive("__all__");
 }
 
-async function runSearch() {
-  const startDate = document.getElementById("start-date").value;
-  const endDate = document.getElementById("end-date").value;
+const DATE_PATH_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
+const state = {
+  data: null,
+  source: "local",
+  basePath: "/",
+  selection: { start: null, end: null },
+  calendarMonth: { year: 0, month: 0 },
+  view: "calendar",
+  rowsByDate: {},
+  dragging: false,
+  dragStart: null,
+  dragEnd: null,
+  dragMoved: false,
+  dragShift: false,
+  previewRange: null,
+  modalDate: null,
+};
+
+function ensureTrailingSlash(path) {
+  if (!path) return "/";
+  return path.endsWith("/") ? path : `${path}/`;
+}
+
+function detectBasePath() {
+  const script = document.querySelector('script[src$="ottawa_dropin_skating.js"]');
+  if (script && script.src) {
+    try {
+      const url = new URL(script.src, window.location.href);
+      return ensureTrailingSlash(url.pathname.replace(/[^/]+$/, ""));
+    } catch (error) {
+      // Fall through to location-based detection.
+    }
+  }
+  const pathname = window.location.pathname || "/";
+  const routedDate = getDateFromPath(pathname);
+  if (routedDate) {
+    const trimmed = pathname.replace(/\/+$/, "");
+    return ensureTrailingSlash(trimmed.slice(0, -routedDate.length));
+  }
+  return ensureTrailingSlash(pathname);
+}
+
+function getDateFromPath(pathname) {
+  const trimmed = pathname.replace(/\/+$/, "");
+  const parts = trimmed.split("/");
+  const last = parts[parts.length - 1] || "";
+  return isValidIsoDate(last) ? last : null;
+}
+
+function isValidIsoDate(dateStr) {
+  if (!DATE_PATH_REGEX.test(dateStr)) return false;
+  const parsed = parseISODateToUTC(dateStr);
+  return parsed && parsed.toISOString().slice(0, 10) === dateStr;
+}
+
+function toLocalDateFromIso(iso) {
+  if (!iso) return null;
+  const parts = iso.split("-").map((value) => Number(value));
+  if (parts.length !== 3 || parts.some((value) => Number.isNaN(value))) {
+    return null;
+  }
+  const [year, month, day] = parts;
+  return new Date(year, month - 1, day);
+}
+
+function formatShortDate(iso) {
+  const date = toLocalDateFromIso(iso);
+  if (!date) return iso || "";
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatLongDate(iso) {
+  const date = toLocalDateFromIso(iso);
+  if (!date) return iso || "";
+  return date.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatMonthLabel(year, month) {
+  return new Date(year, month, 1).toLocaleDateString(undefined, {
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function normalizeRange(start, end) {
+  if (!start) return { start: null, end: null };
+  const finalEnd = end || start;
+  return start <= finalEnd ? { start, end: finalEnd } : { start: finalEnd, end: start };
+}
+
+function isIsoInRange(iso, start, end) {
+  if (!iso || !start || !end) return false;
+  return iso >= start && iso <= end;
+}
+
+function getActiveFilters() {
   const activityFilter = document.querySelector('input[name="activity-filter"]:checked');
   const timeFilters = Array.from(document.querySelectorAll('input[name="time-filter"]:checked')).map(
     (input) => input.value
   );
+  return {
+    category: activityFilter ? activityFilter.value : "skating",
+    timeFilters,
+  };
+}
+
+function setCalendarMonthFromIso(iso) {
+  const date = toLocalDateFromIso(iso);
+  if (!date) return;
+  state.calendarMonth = { year: date.getFullYear(), month: date.getMonth() };
+}
+
+function shiftCalendarMonth(offset) {
+  const { year, month } = state.calendarMonth;
+  const next = new Date(year, month + offset, 1);
+  state.calendarMonth = { year: next.getFullYear(), month: next.getMonth() };
+}
+
+function updateSelectionSummary() {
+  const summary = document.getElementById("selection-range");
+  if (!summary) return;
+  const range = state.previewRange || state.selection;
+  if (!range.start) {
+    summary.textContent = "No dates selected";
+    return;
+  }
+  const days = iterDates(range.start, range.end).length;
+  if (range.start === range.end) {
+    summary.textContent = formatShortDate(range.start);
+    return;
+  }
+  summary.textContent = `${formatShortDate(range.start)} - ${formatShortDate(range.end)} (${days} days)`;
+}
+
+function buildCalendarCells(year, month) {
+  const cells = [];
+  const first = new Date(year, month, 1);
+  const startOffset = (first.getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const prevMonthDays = new Date(year, month, 0).getDate();
+
+  for (let i = startOffset - 1; i >= 0; i -= 1) {
+    const day = prevMonthDays - i;
+    cells.push({ date: new Date(year, month - 1, day), outside: true });
+  }
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    cells.push({ date: new Date(year, month, day), outside: false });
+  }
+  let nextDay = 1;
+  while (cells.length < 42) {
+    cells.push({ date: new Date(year, month + 1, nextDay), outside: true });
+    nextDay += 1;
+  }
+  return cells;
+}
+
+function getDensityClass(count, maxCount) {
+  if (!count || maxCount <= 0) return "";
+  if (maxCount === 1) return "density-1";
+  const ratio = count / maxCount;
+  if (ratio <= 0.25) return "density-1";
+  if (ratio <= 0.5) return "density-2";
+  if (ratio <= 0.75) return "density-3";
+  return "density-4";
+}
+
+function groupRowsByDate(rows) {
+  const grouped = {};
+  for (const row of rows) {
+    if (!grouped[row.date]) grouped[row.date] = [];
+    grouped[row.date].push(row);
+  }
+  return grouped;
+}
+
+function buildFilteredRowsWithStatus(dates, category, timeFilters) {
   const now = new Date();
   const todayIso = getLocalIsoDate(now);
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const allRows = dedupeRows(buildRows(dates, state.data, category));
+  const filteredRows = allRows.filter((row) => matchesTimeOfDay(row, timeFilters));
+  const rows = filteredRows.filter((row) => isSessionUpcoming(row, todayIso, nowMinutes));
+  return { allRows, filteredRows, rows, todayIso };
+}
+
+async function ensureData() {
+  if (state.data) return state.data;
+  const { data, source } = await fetchData();
+  state.data = data;
+  state.source = source;
+  return data;
+}
+
+function renderCalendarGrid(counts, maxCount) {
+  const grid = document.getElementById("calendar-grid");
+  if (!grid) return;
+  grid.innerHTML = "";
+
+  const selection = normalizeRange(state.selection.start, state.selection.end);
+  const todayIso = getLocalIsoDate(new Date());
+  const { year, month } = state.calendarMonth;
+  const cells = buildCalendarCells(year, month);
+
+  for (const cellInfo of cells) {
+    const iso = getLocalIsoDate(cellInfo.date);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "calendar-day";
+    button.dataset.date = iso;
+    if (cellInfo.outside) button.classList.add("outside-month");
+    if (iso === todayIso) button.classList.add("is-today");
+    if (selection.start && isIsoInRange(iso, selection.start, selection.end)) {
+      button.classList.add("is-selected");
+    }
+
+    const count = counts[iso] || 0;
+    const densityClass = getDensityClass(count, maxCount);
+    if (densityClass) button.classList.add(densityClass);
+
+    button.setAttribute(
+      "aria-label",
+      `${formatLongDate(iso)}${count ? `, ${count} sessions` : ""}`
+    );
+
+    const dayNumber = document.createElement("div");
+    dayNumber.className = "day-number";
+    dayNumber.textContent = cellInfo.date.getDate();
+    button.appendChild(dayNumber);
+
+    if (count) {
+      const countEl = document.createElement("div");
+      countEl.className = "session-count";
+      countEl.textContent = `${count} session${count === 1 ? "" : "s"}`;
+      button.appendChild(countEl);
+    }
+
+    grid.appendChild(button);
+  }
+}
+
+function applyPreviewHighlight() {
+  const grid = document.getElementById("calendar-grid");
+  if (!grid) return;
+  const preview = state.previewRange;
+  if (!preview) {
+    grid.querySelectorAll(".calendar-day.is-preview").forEach((cell) => {
+      cell.classList.remove("is-preview");
+    });
+    return;
+  }
+  grid.querySelectorAll(".calendar-day").forEach((cell) => {
+    const iso = cell.dataset.date;
+    if (!iso) return;
+    const isActive = isIsoInRange(iso, preview.start, preview.end);
+    cell.classList.toggle("is-preview", isActive);
+    cell.classList.toggle("is-selected", isActive);
+  });
+}
+
+function renderCalendarView() {
+  setView("calendar");
+
+  const monthLabel = document.getElementById("month-label");
+  if (monthLabel) {
+    monthLabel.textContent = formatMonthLabel(state.calendarMonth.year, state.calendarMonth.month);
+  }
+  updateSelectionSummary();
+
+  const selection = normalizeRange(state.selection.start, state.selection.end);
+  if (!selection.start) return;
+
+  const { category, timeFilters } = getActiveFilters();
+  const dates = iterDates(selection.start, selection.end);
+  const { rows, filteredRows, todayIso } = buildFilteredRowsWithStatus(
+    dates,
+    category,
+    timeFilters
+  );
+
+  state.rowsByDate = groupRowsByDate(rows);
+  const counts = {};
+  let maxCount = 0;
+  for (const [date, list] of Object.entries(state.rowsByDate)) {
+    counts[date] = list.length;
+    maxCount = Math.max(maxCount, list.length);
+  }
+
+  renderCalendarGrid(counts, maxCount);
+
+  const calendarStatus = document.getElementById("calendar-status");
+  if (calendarStatus) {
+    const label = state.source === "remote" ? " (fallback data)" : "";
+    if (!rows.length) {
+      let message = "No matching sessions in that range.";
+      if (filteredRows.length && filteredRows.every((row) => row.date === todayIso)) {
+        message = "No more sessions for today.";
+      }
+      calendarStatus.textContent = `${message}${label}`;
+    } else {
+      calendarStatus.textContent = `Showing ${rows.length} sessions across ${dates.length} day${
+        dates.length === 1 ? "" : "s"
+      }.${label}`;
+    }
+  }
+}
+
+function renderListView() {
+  setView("list");
+
+  const listLabel = document.getElementById("list-date-label");
   const status = document.getElementById("status");
   const tableContainer = document.getElementById("results");
   const downloadLink = document.getElementById("download");
   const neighbourhoodFilter = document.getElementById("neighbourhood-filter");
 
-  status.textContent = "Loading data...";
-  tableContainer.innerHTML = "";
-  downloadLink.style.display = "none";
+  const dateIso = state.selection.start || getLocalIsoDate(new Date());
+  state.selection = { start: dateIso, end: dateIso };
+  updateSelectionSummary();
+  if (listLabel) {
+    listLabel.textContent = formatLongDate(dateIso);
+  }
+  if (status) status.textContent = "Loading data...";
+  if (tableContainer) tableContainer.innerHTML = "";
+  if (downloadLink) downloadLink.style.display = "none";
 
-  const dates = iterDates(startDate, endDate);
-  if (!dates.length) {
-    status.textContent = "Select a start date.";
+  const { category, timeFilters } = getActiveFilters();
+  const dates = iterDates(dateIso, dateIso);
+  const { rows, filteredRows, todayIso } = buildFilteredRowsWithStatus(
+    dates,
+    category,
+    timeFilters
+  );
+
+  if (!rows.length) {
+    let message = "No matching sessions.";
+    if (filteredRows.length && filteredRows.every((row) => row.date === todayIso)) {
+      message = "No more sessions for that day.";
+    }
+    if (status) status.textContent = message;
+    if (tableContainer) tableContainer.innerHTML = "";
+    if (neighbourhoodFilter) neighbourhoodFilter.style.display = "none";
     return;
   }
-  const category = activityFilter ? activityFilter.value : "skating";
+
+  const orderMap = buildNeighbourhoodOrder(rows, state.data.facility || []);
+  sortRows(rows, orderMap);
+
+  const applySelection = (filteredRows) => {
+    const label = state.source === "remote" ? " (fallback data)" : "";
+    if (status) status.textContent = `Found ${filteredRows.length} sessions.${label}`;
+    if (tableContainer) renderTable(filteredRows, orderMap, tableContainer);
+    if (downloadLink) updateDownloadLink(filteredRows, orderMap, dates, downloadLink);
+  };
+
+  if (!neighbourhoodFilter) {
+    applySelection(rows);
+    return;
+  }
+  renderNeighbourhoodFilter(rows, orderMap, neighbourhoodFilter, applySelection);
+}
+
+async function updateView() {
+  const status = document.getElementById("status");
+  const calendarStatus = document.getElementById("calendar-status");
+  if (status) status.textContent = "Loading data...";
+  if (calendarStatus) calendarStatus.textContent = "Loading data...";
 
   try {
-    const { data, source } = await fetchData();
-    const allRows = dedupeRows(buildRows(dates, data, category));
-    const filteredRows = allRows.filter((row) => matchesTimeOfDay(row, timeFilters));
-    const rows = filteredRows.filter((row) => isSessionUpcoming(row, todayIso, nowMinutes));
-    if (!rows.length) {
-      let message = "No matching sessions.";
-      if (filteredRows.length && filteredRows.every((row) => row.date === todayIso)) {
-        message = "No more sessions for that day.";
-      }
-      status.textContent = message;
-      tableContainer.innerHTML = "";
-      if (neighbourhoodFilter) {
-        neighbourhoodFilter.style.display = "none";
-      }
-      return;
-    }
-    const orderMap = buildNeighbourhoodOrder(rows, data.facility || []);
-    sortRows(rows, orderMap);
-
-    const applySelection = (filteredRows) => {
-      const label = source === "remote" ? " (fallback data)" : "";
-      status.textContent = `Found ${filteredRows.length} sessions.${label}`;
-      renderTable(filteredRows, orderMap, tableContainer);
-      updateDownloadLink(filteredRows, orderMap, dates, downloadLink);
-    };
-
-    if (!neighbourhoodFilter) {
-      applySelection(rows);
-      return;
-    }
-    renderNeighbourhoodFilter(rows, orderMap, neighbourhoodFilter, applySelection);
+    await ensureData();
   } catch (error) {
-    status.textContent = `Error: ${error.message}. Try a hard refresh or the GitHub Pages site.`;
+    const message = `Error: ${error.message}. Try a hard refresh or the GitHub Pages site.`;
+    if (status) status.textContent = message;
+    if (calendarStatus) calendarStatus.textContent = message;
+    return;
+  }
+
+  if (state.view === "list") {
+    renderListView();
+  } else {
+    renderCalendarView();
   }
 }
 
-function setDefaultDates() {
-  document.getElementById("start-date").value = getLocalIsoDate(new Date());
+function setView(view) {
+  state.view = view;
+  const calendarView = document.getElementById("calendar-view");
+  const listView = document.getElementById("list-view");
+  if (calendarView) calendarView.hidden = view !== "calendar";
+  if (listView) listView.hidden = view !== "list";
+}
+
+function updateHistory(method, stateObj, url) {
+  try {
+    history[method](stateObj, "", url);
+  } catch (error) {
+    // Ignore history errors (e.g., file://).
+  }
+}
+
+function navigateToCalendar({ replace = false } = {}) {
+  const url = state.basePath;
+  updateHistory(replace ? "replaceState" : "pushState", { view: "calendar" }, url);
+  state.view = "calendar";
+  void updateView();
+}
+
+function navigateToDate(dateIso, { replace = false } = {}) {
+  if (!isValidIsoDate(dateIso)) return;
+  state.selection = { start: dateIso, end: dateIso };
+  setCalendarMonthFromIso(dateIso);
+  const url = `${state.basePath}${dateIso}`;
+  updateHistory(replace ? "replaceState" : "pushState", { view: "list", date: dateIso }, url);
+  state.view = "list";
+  void updateView();
+}
+
+function openDayModal(dateIso) {
+  const modal = document.getElementById("day-modal");
+  const title = document.getElementById("modal-title");
+  const body = document.getElementById("modal-body");
+  if (!modal || !title || !body) return;
+
+  const rows = state.rowsByDate[dateIso] || [];
+  state.modalDate = dateIso;
+  title.textContent = `Sessions on ${formatLongDate(dateIso)}`;
+  body.innerHTML = "";
+
+  if (!rows.length) {
+    body.textContent = "No matching sessions for this day.";
+  } else {
+    const grouped = {};
+    for (const row of rows) {
+      const key = row.facility_url || row.facility_name || row.facility_address || row.activity_name;
+      if (!grouped[key]) {
+        grouped[key] = {
+          name: row.facility_name || "Unknown facility",
+          address: row.facility_address || "",
+          url: row.facility_url || "",
+          sessions: [],
+        };
+      }
+      grouped[key].sessions.push(row);
+    }
+
+    const groups = Object.values(grouped).sort((a, b) => a.name.localeCompare(b.name));
+    for (const group of groups) {
+      group.sessions.sort((a, b) => a.start_time.localeCompare(b.start_time));
+      const card = document.createElement("div");
+      card.className = "location-card";
+
+      const name = document.createElement("div");
+      name.className = "location-name";
+      if (group.url && group.url.startsWith("http")) {
+        const link = document.createElement("a");
+        link.href = group.url;
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = group.name;
+        name.appendChild(link);
+      } else {
+        name.textContent = group.name;
+      }
+      card.appendChild(name);
+
+      if (group.address) {
+        const meta = document.createElement("div");
+        meta.className = "location-meta";
+        const link = document.createElement("a");
+        const destination = encodeURIComponent(group.address);
+        link.href = `https://www.google.com/maps/search/?api=1&query=${destination}`;
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = group.address;
+        meta.appendChild(link);
+        card.appendChild(meta);
+      }
+
+      const list = document.createElement("ul");
+      list.className = "location-sessions";
+      for (const session of group.sessions) {
+        const item = document.createElement("li");
+        const time = session.end_time
+          ? `${session.start_time} - ${session.end_time}`
+          : session.start_time || "Time TBD";
+        const label = session.activity_name || session.raw_activity || "Session";
+        item.textContent = `${time} - ${label}`;
+        list.appendChild(item);
+      }
+      card.appendChild(list);
+      body.appendChild(card);
+    }
+  }
+
+  if (typeof modal.showModal === "function") {
+    modal.showModal();
+  } else {
+    modal.setAttribute("open", "");
+  }
+}
+
+function closeDayModal() {
+  const modal = document.getElementById("day-modal");
+  if (!modal) return;
+  state.modalDate = null;
+  if (typeof modal.close === "function") {
+    modal.close();
+  } else {
+    modal.removeAttribute("open");
+  }
+}
+
+function setupModalInteractions() {
+  const modal = document.getElementById("day-modal");
+  const closeButton = document.getElementById("modal-close");
+  const viewButton = document.getElementById("modal-view-list");
+  if (closeButton) {
+    closeButton.addEventListener("click", closeDayModal);
+  }
+  if (viewButton) {
+    viewButton.addEventListener("click", () => {
+      if (state.modalDate) {
+        closeDayModal();
+        navigateToDate(state.modalDate);
+      }
+    });
+  }
+  if (modal) {
+    modal.addEventListener("click", (event) => {
+      if (event.target === modal) {
+        closeDayModal();
+      }
+    });
+    modal.addEventListener("cancel", () => {
+      state.modalDate = null;
+    });
+  }
+}
+
+function handleDayClick(dateIso, shiftKey) {
+  if (!dateIso) return;
+  const selection = normalizeRange(state.selection.start, state.selection.end);
+  const isMulti = selection.start && selection.end && selection.start !== selection.end;
+  const inRange = isMulti && isIsoInRange(dateIso, selection.start, selection.end);
+
+  if (shiftKey && selection.start) {
+    const range = normalizeRange(selection.start, dateIso);
+    state.selection = range;
+    state.previewRange = null;
+    updateSelectionSummary();
+    if (range.start !== range.end) {
+      navigateToCalendar();
+    } else {
+      navigateToDate(range.start);
+    }
+    return;
+  }
+
+  if (state.view === "calendar" && isMulti && inRange) {
+    openDayModal(dateIso);
+    return;
+  }
+
+  navigateToDate(dateIso);
+}
+
+function finalizeDrag() {
+  if (!state.dragging) return;
+  const start = state.dragStart;
+  const end = state.dragEnd;
+  const moved = state.dragMoved;
+  const shiftKey = state.dragShift;
+  state.dragging = false;
+  state.dragStart = null;
+  state.dragEnd = null;
+  state.dragMoved = false;
+  state.dragShift = false;
+  state.previewRange = null;
+
+  if (!start) return;
+  if (!moved) {
+    handleDayClick(start, shiftKey);
+    return;
+  }
+
+  const range = normalizeRange(start, end);
+  state.selection = range;
+  updateSelectionSummary();
+  if (range.start !== range.end) {
+    navigateToCalendar();
+  } else {
+    navigateToDate(range.start);
+  }
+}
+
+function setupCalendarInteractions() {
+  const grid = document.getElementById("calendar-grid");
+  if (!grid) return;
+
+  grid.addEventListener("pointerdown", (event) => {
+    const cell = event.target.closest(".calendar-day");
+    if (!cell) return;
+    const iso = cell.dataset.date;
+    if (!iso) return;
+    event.preventDefault();
+    state.dragging = true;
+    state.dragStart = iso;
+    state.dragEnd = iso;
+    state.dragMoved = false;
+    state.dragShift = event.shiftKey;
+    state.previewRange = normalizeRange(iso, iso);
+    applyPreviewHighlight();
+    updateSelectionSummary();
+    grid.setPointerCapture(event.pointerId);
+  });
+
+  grid.addEventListener("pointerover", (event) => {
+    if (!state.dragging) return;
+    const cell = event.target.closest(".calendar-day");
+    if (!cell) return;
+    const iso = cell.dataset.date;
+    if (!iso || iso === state.dragEnd) return;
+    state.dragEnd = iso;
+    state.dragMoved = state.dragStart !== iso;
+    state.previewRange = normalizeRange(state.dragStart, state.dragEnd);
+    applyPreviewHighlight();
+    updateSelectionSummary();
+  });
+
+  grid.addEventListener("pointerup", () => {
+    if (!state.dragging) return;
+    finalizeDrag();
+  });
+
+  grid.addEventListener("pointercancel", () => {
+    if (!state.dragging) return;
+    state.dragging = false;
+    state.previewRange = null;
+    updateSelectionSummary();
+    renderCalendarView();
+  });
+
+  window.addEventListener("pointerup", () => {
+    if (state.dragging) finalizeDrag();
+  });
+
+  grid.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    const cell = event.target.closest(".calendar-day");
+    if (!cell) return;
+    event.preventDefault();
+    handleDayClick(cell.dataset.date, event.shiftKey);
+  });
 }
 
 function applyTheme(theme) {
@@ -863,21 +1460,87 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  setDefaultDates();
-  document.getElementById("search-button").addEventListener("click", runSearch);
+  state.basePath = detectBasePath();
+  const dateFromPath = getDateFromPath(window.location.pathname);
+  const todayIso = getLocalIsoDate(new Date());
+  const initialDate = dateFromPath || todayIso;
+  state.selection = { start: initialDate, end: initialDate };
+  setCalendarMonthFromIso(initialDate);
+  state.view = dateFromPath ? "list" : "calendar";
+
+  updateSelectionSummary();
+  setupCalendarInteractions();
+  setupModalInteractions();
+
   const todayButton = document.getElementById("today-button");
   if (todayButton) {
     todayButton.addEventListener("click", () => {
-      setDefaultDates();
-    });
-  }
-  const clearEndDate = document.getElementById("clear-end-date");
-  if (clearEndDate) {
-    clearEndDate.addEventListener("click", () => {
-      const endDate = document.getElementById("end-date");
-      if (endDate) {
-        endDate.value = "";
+      const today = getLocalIsoDate(new Date());
+      state.selection = { start: today, end: today };
+      setCalendarMonthFromIso(today);
+      if (state.view === "list") {
+        navigateToDate(today);
+      } else {
+        updateSelectionSummary();
+        void updateView();
       }
     });
   }
+
+  const resetButton = document.getElementById("reset-selection");
+  if (resetButton) {
+    resetButton.addEventListener("click", () => {
+      const today = getLocalIsoDate(new Date());
+      state.selection = { start: today, end: today };
+      setCalendarMonthFromIso(today);
+      navigateToCalendar();
+    });
+  }
+
+  const backButton = document.getElementById("back-to-calendar");
+  if (backButton) {
+    backButton.addEventListener("click", () => {
+      navigateToCalendar();
+    });
+  }
+
+  const prevMonth = document.getElementById("prev-month");
+  if (prevMonth) {
+    prevMonth.addEventListener("click", () => {
+      shiftCalendarMonth(-1);
+      if (state.view === "calendar") {
+        void updateView();
+      }
+    });
+  }
+  const nextMonth = document.getElementById("next-month");
+  if (nextMonth) {
+    nextMonth.addEventListener("click", () => {
+      shiftCalendarMonth(1);
+      if (state.view === "calendar") {
+        void updateView();
+      }
+    });
+  }
+
+  document.querySelectorAll('input[name="activity-filter"]').forEach((input) => {
+    input.addEventListener("change", () => void updateView());
+  });
+  document.querySelectorAll('input[name="time-filter"]').forEach((input) => {
+    input.addEventListener("change", () => void updateView());
+  });
+
+  window.addEventListener("popstate", () => {
+    const routedDate = getDateFromPath(window.location.pathname);
+    if (routedDate) {
+      state.selection = { start: routedDate, end: routedDate };
+      setCalendarMonthFromIso(routedDate);
+      state.view = "list";
+    } else {
+      state.view = "calendar";
+    }
+    void updateView();
+  });
+
+  void updateView();
 });
