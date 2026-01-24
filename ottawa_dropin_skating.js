@@ -813,6 +813,7 @@ const state = {
   locationSource: null,
   maxDistanceKm: null,
   sortByDistance: false,
+  sortTouched: false,
   locationStatus: "",
   distanceMode: "auto",
   distanceCacheKey: "",
@@ -1612,6 +1613,9 @@ function syncLocationControls() {
   const sortDistance = document.getElementById("sort-distance");
   const hasActiveLocation = Boolean(activeLocation);
   if (sortDistance) {
+    if (hasActiveLocation && !state.sortTouched) {
+      state.sortByDistance = true;
+    }
     if (!hasActiveLocation && state.sortByDistance) {
       state.sortByDistance = false;
     }
@@ -1702,6 +1706,7 @@ function setupLocationControls() {
         setLocationStatus("Pick a location first.");
         return;
       }
+      state.sortTouched = true;
       state.sortByDistance = sortDistance.checked;
       state.locationStatus = "";
       refreshLocationStatus();
@@ -1712,7 +1717,7 @@ function setupLocationControls() {
   const mapElement = document.getElementById("location-map");
   if (mapElement && typeof L !== "undefined") {
     const defaultCenter = [45.4215, -75.6972];
-    state.mapInstance = L.map(mapElement, { scrollWheelZoom: false }).setView(defaultCenter, 11);
+    state.mapInstance = L.map(mapElement, { scrollWheelZoom: true }).setView(defaultCenter, 11);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       attribution: "&copy; OpenStreetMap contributors",
