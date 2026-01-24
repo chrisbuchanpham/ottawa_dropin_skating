@@ -809,6 +809,7 @@ const state = {
   dragShift: false,
   previewRange: null,
   calendarListenersBound: false,
+  suppressClick: false,
   currentLocation: null,
   mapLocation: null,
   locationSource: null,
@@ -1019,7 +1020,7 @@ function applyLocationFilters(rows, filteredRows) {
   };
   const rowsFiltered = rows.filter(filterByDistance);
   const filteredRowsFiltered = filteredRows.filter(filterByDistance);
-  return { rows: rowsFiltered, filteredRows: filteredRowsFiltered, activeLocations };
+  return { rows: rowsFiltered, filteredRows: filteredRowsFiltered, activeLocation };
 }
 
 function buildDistanceOrderMap(rows, fallbackOrderMap) {
@@ -1484,42 +1485,90 @@ function setupCalendarInteractions() {
   if (!grid || state.calendarListenersBound) return;
   state.calendarListenersBound = true;
 
-  document.addEventListener("pointerdown", (event) => {
-    const cell = event.target.closest(".calendar-day");
-    if (!cell || !grid.contains(cell)) return;
+  const getCellFromTarget = (target) => {
+    if (!(target instanceof Element)) return null;
+    const cell = target.closest(".calendar-day");
+    if (!cell || !grid.contains(cell)) return null;
     const iso = cell.dataset.date;
-    if (!iso) return;
-    event.preventDefault();
+    if (!iso) return null;
+    return { cell, iso };
+  };
+
+  const startDrag = (iso, shiftKey) => {
     state.dragging = true;
     state.dragStart = iso;
     state.dragEnd = iso;
     state.dragMoved = false;
-    state.dragShift = event.shiftKey;
+    state.dragShift = shiftKey;
     state.previewRange = normalizeRange(iso, iso);
     applyPreviewHighlight();
     updateSelectionSummary();
-  });
+  };
 
-  document.addEventListener("pointermove", (event) => {
-    if (!state.dragging) return;
-    const target = document.elementFromPoint(event.clientX, event.clientY);
-    const cell = target ? target.closest(".calendar-day") : null;
-    if (!cell || !grid.contains(cell)) return;
-    const iso = cell.dataset.date;
-    if (!iso || iso === state.dragEnd) return;
+  const updateDrag = (iso) => {
+    if (!state.dragging || !iso || iso === state.dragEnd) return;
     state.dragEnd = iso;
     state.dragMoved = state.dragStart !== iso;
     state.previewRange = normalizeRange(state.dragStart, state.dragEnd);
     applyPreviewHighlight();
     updateSelectionSummary();
+  };
+
+  grid.addEventListener("mousedown", (event) => {
+    if (event.button !== 0) return;
+    const data = getCellFromTarget(event.target);
+    if (!data) return;
+    event.preventDefault();
+    startDrag(data.iso, event.shiftKey);
   });
 
-  document.addEventListener("pointerup", () => {
+  document.addEventListener("mousemove", (event) => {
+    if (!state.dragging) return;
+    const target = document.elementFromPoint(event.clientX, event.clientY);
+    const data = getCellFromTarget(target);
+    if (!data) return;
+    updateDrag(data.iso);
+  });
+
+  document.addEventListener("mouseup", () => {
     if (!state.dragging) return;
     finalizeDrag();
   });
 
-  document.addEventListener("pointercancel", () => {
+  grid.addEventListener(
+    "touchstart",
+    (event) => {
+      if (!event.touches.length) return;
+      const touch = event.touches[0];
+      const target = document.elementFromPoint(touch.clientX, touch.clientY);
+      const data = getCellFromTarget(target);
+      if (!data) return;
+      event.preventDefault();
+      startDrag(data.iso, false);
+    },
+    { passive: false }
+  );
+
+  document.addEventListener(
+    "touchmove",
+    (event) => {
+      if (!state.dragging || !event.touches.length) return;
+      const touch = event.touches[0];
+      const target = document.elementFromPoint(touch.clientX, touch.clientY);
+      const data = getCellFromTarget(target);
+      if (!data) return;
+      event.preventDefault();
+      updateDrag(data.iso);
+    },
+    { passive: false }
+  );
+
+  document.addEventListener("touchend", () => {
+    if (!state.dragging) return;
+    finalizeDrag();
+  });
+
+  document.addEventListener("touchcancel", () => {
     if (!state.dragging) return;
     resetDragState();
     updateSelectionSummary();
