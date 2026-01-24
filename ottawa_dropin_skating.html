@@ -165,7 +165,8 @@
         background: var(--table-head);
       }
       .controls input[type="date"],
-      .controls input[type="text"] {
+      .controls input[type="text"],
+      .controls input[type="number"] {
         width: 100%;
         max-width: 420px;
         padding: 0.4rem 0.5rem;
@@ -213,6 +214,71 @@
       .time-filters label {
         margin-top: 0.4rem;
         font-weight: 500;
+      }
+      .location-controls {
+        margin-top: 0.75rem;
+        display: grid;
+        gap: 0.8rem;
+      }
+      .location-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.6rem 1rem;
+      }
+      .inline-control {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-top: 0;
+        font-weight: 500;
+      }
+      .controls label.inline-control {
+        margin-top: 0;
+        font-weight: 500;
+      }
+      .distance-control {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        min-width: 200px;
+      }
+      .distance-control input[type="range"] {
+        width: 100%;
+      }
+      .location-inputs {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 0.6rem;
+        align-items: end;
+      }
+      .location-field label {
+        margin-top: 0;
+        font-weight: 600;
+        font-size: 0.85rem;
+      }
+      .saved-locations {
+        display: grid;
+        gap: 0.5rem;
+      }
+      .saved-location {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.6rem;
+        padding: 0.45rem 0.6rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--table-head);
+      }
+      .saved-location-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+      .location-status {
+        min-height: 1rem;
       }
       .hint {
         font-weight: 400;
@@ -720,13 +786,60 @@
         <label><input type="radio" name="activity-filter" value="youth-hockey" /> Youth hockey</label>
       </div>
 
-      <label>Time of day <span class="hint">(all timeslots by default)</span></label>
-      <div class="time-filters">
-        <label><input type="checkbox" name="time-filter" value="morning" /> Morning (before noon)</label>
-        <label><input type="checkbox" name="time-filter" value="afternoon" /> Afternoon (noon - 6pm)</label>
-        <label><input type="checkbox" name="time-filter" value="evening" /> Evening (after 6pm)</label>
+        <label>Time of day <span class="hint">(all timeslots by default)</span></label>
+        <div class="time-filters">
+          <label><input type="checkbox" name="time-filter" value="morning" /> Morning (before noon)</label>
+          <label><input type="checkbox" name="time-filter" value="afternoon" /> Afternoon (noon - 6pm)</label>
+          <label><input type="checkbox" name="time-filter" value="evening" /> Evening (after 6pm)</label>
+        </div>
+
+        <label>Location filter <span class="hint">(local only, nothing saved to a server)</span></label>
+        <div class="location-controls">
+          <div class="location-row">
+            <button id="use-location" class="secondary-button" type="button">Use my location</button>
+            <label class="inline-control">
+              <input type="checkbox" id="include-current-location" />
+              Include current location
+            </label>
+            <span id="location-status" class="hint location-status"></span>
+          </div>
+          <div class="location-row">
+            <div class="distance-control">
+              <div>Max distance: <span id="distance-value">No limit</span></div>
+              <input id="distance-range" type="range" min="1" max="50" value="15" />
+            </div>
+            <label class="inline-control">
+              <input type="checkbox" id="distance-unlimited" checked />
+              No limit
+            </label>
+            <label class="inline-control">
+              <input type="checkbox" id="sort-distance" />
+              Sort neighbourhoods by nearest
+            </label>
+          </div>
+          <div class="location-inputs">
+            <div class="location-field">
+              <label for="location-label">Label</label>
+              <input id="location-label" type="text" placeholder="Home, work, school" />
+            </div>
+            <div class="location-field">
+              <label for="location-lat">Latitude</label>
+              <input id="location-lat" type="number" step="0.0001" placeholder="45.4215" />
+            </div>
+            <div class="location-field">
+              <label for="location-lng">Longitude</label>
+              <input id="location-lng" type="number" step="0.0001" placeholder="-75.6972" />
+            </div>
+            <div class="location-field">
+              <button id="add-location" class="secondary-button" type="button">Save location</button>
+            </div>
+          </div>
+          <div class="filter-title">Saved locations</div>
+          <div id="saved-locations" class="saved-locations">
+            <div class="hint">No saved locations yet.</div>
+          </div>
+        </div>
       </div>
-    </div>
 
     <div id="calendar-view" class="calendar-view">
       <div class="calendar-card">

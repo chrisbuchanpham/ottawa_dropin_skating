@@ -206,6 +206,9 @@ const RESERVATION_NOT_REQUIRED_TERMS = [
   "walk-in",
 ];
 const RESERVATION_REQUIRED_TERMS = ["reservation required", "reservations required"];
+const LOCATION_STORAGE_KEY = "ods_location_prefs";
+const DEFAULT_DISTANCE_KM = 15;
+const MAX_DISTANCE_KM = 50;
 
 function normalizeMatchText(value) {
   return String(value || "")
@@ -467,11 +470,16 @@ function buildNeighbourhoodOrder(rows, facilities) {
   return orderMap;
 }
 
-function sortRows(rows, orderMap) {
+function sortRows(rows, orderMap, { useDistance = false } = {}) {
   return rows.sort((a, b) => {
     const orderA = orderMap[a.neighbourhood] ?? 9999;
     const orderB = orderMap[b.neighbourhood] ?? 9999;
     if (orderA !== orderB) return orderA - orderB;
+    if (useDistance) {
+      const distA = a.distance_km ?? Number.POSITIVE_INFINITY;
+      const distB = b.distance_km ?? Number.POSITIVE_INFINITY;
+      if (distA !== distB) return distA - distB;
+    }
     if (a.date !== b.date) return a.date.localeCompare(b.date);
     if (a.start_time !== b.start_time) return a.start_time.localeCompare(b.start_time);
     if (a.facility_name !== b.facility_name) return a.facility_name.localeCompare(b.facility_name);
@@ -789,6 +797,13 @@ const state = {
   dragMoved: false,
   dragShift: false,
   previewRange: null,
+  savedLocations: [],
+  activeLocationIds: new Set(),
+  currentLocation: null,
+  includeCurrentLocation: false,
+  maxDistanceKm: null,
+  sortByDistance: false,
+  locationStatus: "",
 };
 
 function ensureTrailingSlash(path) {
@@ -886,6 +901,186 @@ function getActiveFilters() {
     category: activityFilter ? activityFilter.value : "skating",
     timeFilters,
   };
+}
+
+function toNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function createLocationId() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `loc_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+function normalizeSavedLocation(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const label = String(raw.label || "").trim() || "Saved location";
+  const latitude = toNumber(raw.latitude);
+  const longitude = toNumber(raw.longitude);
+  if (latitude === null || longitude === null) return null;
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null;
+  const id = String(raw.id || createLocationId());
+  return { id, label, latitude, longitude };
+}
+
+function loadLocationPrefs() {
+  try {
+    const raw = localStorage.getItem(LOCATION_STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    const saved = Array.isArray(parsed.savedLocations)
+      ? parsed.savedLocations.map(normalizeSavedLocation).filter(Boolean)
+      : [];
+    state.savedLocations = saved;
+    const activeIds = Array.isArray(parsed.activeLocationIds) ? parsed.activeLocationIds : [];
+    const validIds = new Set(saved.map((loc) => loc.id));
+    state.activeLocationIds = new Set(activeIds.filter((id) => validIds.has(id)));
+    const maxDistance =
+      parsed.maxDistanceKm === null || parsed.maxDistanceKm === undefined
+        ? null
+        : Number(parsed.maxDistanceKm);
+    if (maxDistance === null || !Number.isFinite(maxDistance)) {
+      state.maxDistanceKm = null;
+    } else {
+      state.maxDistanceKm = Math.min(Math.max(Math.round(maxDistance), 1), MAX_DISTANCE_KM);
+    }
+    state.sortByDistance = Boolean(parsed.sortByDistance);
+  } catch (error) {
+    // Ignore invalid local storage.
+  }
+}
+
+function saveLocationPrefs() {
+  const payload = {
+    savedLocations: state.savedLocations.map((loc) => ({
+      id: loc.id,
+      label: loc.label,
+      latitude: loc.latitude,
+      longitude: loc.longitude,
+    })),
+    activeLocationIds: Array.from(state.activeLocationIds),
+    maxDistanceKm: state.maxDistanceKm,
+    sortByDistance: state.sortByDistance,
+  };
+  try {
+    localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(payload));
+  } catch (error) {
+    // Ignore storage errors.
+  }
+}
+
+function getActiveLocations() {
+  const locations = [];
+  if (state.includeCurrentLocation && state.currentLocation) {
+    locations.push({
+      id: "current",
+      label: "Current location",
+      latitude: state.currentLocation.latitude,
+      longitude: state.currentLocation.longitude,
+    });
+  }
+  for (const loc of state.savedLocations) {
+    if (state.activeLocationIds.has(loc.id)) {
+      locations.push(loc);
+    }
+  }
+  return locations;
+}
+
+function computeDistanceKm(lat1, lon1, lat2, lon2) {
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const originLat = toRad(lat1);
+  const destLat = toRad(lat2);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(originLat) * Math.cos(destLat) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return 6371 * 2 * Math.asin(Math.sqrt(a));
+}
+
+function ensureRowDistance(row, locations) {
+  if (row.distance_km !== undefined) return row.distance_km;
+  const lat = toNumber(row.facility_latitude);
+  const lon = toNumber(row.facility_longitude);
+  if (lat === null || lon === null) {
+    row.distance_km = null;
+    return row.distance_km;
+  }
+  let minDistance = null;
+  for (const loc of locations) {
+    const distance = computeDistanceKm(lat, lon, loc.latitude, loc.longitude);
+    if (minDistance === null || distance < minDistance) {
+      minDistance = distance;
+    }
+  }
+  row.distance_km = minDistance;
+  return row.distance_km;
+}
+
+function applyLocationFilters(rows, filteredRows) {
+  const activeLocations = getActiveLocations();
+  const shouldCompute =
+    activeLocations.length > 0 && (state.maxDistanceKm !== null || state.sortByDistance);
+  if (!shouldCompute) {
+    return { rows, filteredRows, activeLocations };
+  }
+  const maxDistance = state.maxDistanceKm;
+  const filterByDistance = (row) => {
+    const distance = ensureRowDistance(row, activeLocations);
+    if (maxDistance === null) {
+      return true;
+    }
+    if (distance === null) {
+      return false;
+    }
+    return distance <= maxDistance;
+  };
+  const rowsFiltered = rows.filter(filterByDistance);
+  const filteredRowsFiltered = filteredRows.filter(filterByDistance);
+  return { rows: rowsFiltered, filteredRows: filteredRowsFiltered, activeLocations };
+}
+
+function buildDistanceOrderMap(rows, fallbackOrderMap) {
+  const minDistances = {};
+  for (const row of rows) {
+    if (row.distance_km === null || row.distance_km === undefined) continue;
+    const current = minDistances[row.neighbourhood];
+    if (current === undefined || row.distance_km < current) {
+      minDistances[row.neighbourhood] = row.distance_km;
+    }
+  }
+  const neighbourhoods = Array.from(new Set(rows.map((row) => row.neighbourhood)));
+  if (!neighbourhoods.length || !Object.keys(minDistances).length) {
+    return null;
+  }
+  neighbourhoods.sort((a, b) => {
+    const distA = minDistances[a];
+    const distB = minDistances[b];
+    if (distA === undefined && distB === undefined) {
+      return (fallbackOrderMap[a] ?? 9999) - (fallbackOrderMap[b] ?? 9999);
+    }
+    if (distA === undefined) return 1;
+    if (distB === undefined) return -1;
+    if (distA !== distB) return distA - distB;
+    return (fallbackOrderMap[a] ?? 9999) - (fallbackOrderMap[b] ?? 9999);
+  });
+  const orderMap = {};
+  neighbourhoods.forEach((name, idx) => {
+    orderMap[name] = idx;
+  });
+  return orderMap;
+}
+
+function buildDisplayOrderMap(rows, facilities) {
+  const baseOrder = buildNeighbourhoodOrder(rows, facilities);
+  if (!state.sortByDistance) return baseOrder;
+  const distanceOrder = buildDistanceOrderMap(rows, baseOrder);
+  return distanceOrder || baseOrder;
 }
 
 function setCalendarMonthFromIso(iso) {
@@ -1061,11 +1256,10 @@ function renderCalendarView() {
 
   const { category, timeFilters } = getActiveFilters();
   const dates = iterDates(selection.start, selection.end);
-  const { rows, filteredRows, todayIso } = buildFilteredRowsWithStatus(
-    dates,
-    category,
-    timeFilters
-  );
+  let { rows, filteredRows, todayIso } = buildFilteredRowsWithStatus(dates, category, timeFilters);
+  const locationFiltered = applyLocationFilters(rows, filteredRows);
+  rows = locationFiltered.rows;
+  filteredRows = locationFiltered.filteredRows;
 
   state.rowsByDate = groupRowsByDate(rows);
   const counts = {};
@@ -1127,8 +1321,8 @@ function renderRangeListView(rows, dates, filteredRows, todayIso) {
     return;
   }
 
-  const orderMap = buildNeighbourhoodOrder(rows, state.data.facility || []);
-  sortRows(rows, orderMap);
+  const orderMap = buildDisplayOrderMap(rows, state.data.facility || []);
+  sortRows(rows, orderMap, { useDistance: state.sortByDistance });
 
   const applySelection = (filteredRows) => {
     const label = state.source === "remote" ? " (fallback data)" : "";
@@ -1191,8 +1385,8 @@ function openDayModal(dateIso) {
   if (!rows.length) {
     status.textContent = "No matching sessions for this day.";
   } else {
-    const orderMap = buildNeighbourhoodOrder(rows, state.data.facility || []);
-    sortRows(rows, orderMap);
+    const orderMap = buildDisplayOrderMap(rows, state.data.facility || []);
+    sortRows(rows, orderMap, { useDistance: state.sortByDistance });
     const applySelection = (filteredRows) => {
       const label = state.source === "remote" ? " (fallback data)" : "";
       status.textContent = `Found ${filteredRows.length} sessions.${label}`;
@@ -1362,6 +1556,289 @@ function applyTheme(theme) {
   }
 }
 
+function setLocationStatus(message) {
+  state.locationStatus = message;
+  const status = document.getElementById("location-status");
+  if (status) {
+    status.textContent = message;
+  }
+}
+
+function refreshLocationStatus() {
+  const status = document.getElementById("location-status");
+  if (!status) return;
+  if (state.locationStatus) {
+    status.textContent = state.locationStatus;
+    return;
+  }
+  const activeLocations = getActiveLocations();
+  if (!activeLocations.length) {
+    status.textContent = "Add a saved location or use my location to enable distance filtering.";
+    return;
+  }
+  if (state.maxDistanceKm !== null) {
+    status.textContent = `Filtering within ${state.maxDistanceKm} km of ${activeLocations.length} location${
+      activeLocations.length === 1 ? "" : "s"
+    }.`;
+    return;
+  }
+  if (state.sortByDistance) {
+    status.textContent = `Sorting by nearest of ${activeLocations.length} location${
+      activeLocations.length === 1 ? "" : "s"
+    }.`;
+    return;
+  }
+  status.textContent = `Distance options ready for ${activeLocations.length} location${
+    activeLocations.length === 1 ? "" : "s"
+  }.`;
+}
+
+function renderSavedLocations() {
+  const container = document.getElementById("saved-locations");
+  if (!container) return;
+  container.innerHTML = "";
+  if (!state.savedLocations.length) {
+    const empty = document.createElement("div");
+    empty.className = "hint";
+    empty.textContent = "No saved locations yet.";
+    container.appendChild(empty);
+    return;
+  }
+  state.savedLocations.forEach((loc) => {
+    const item = document.createElement("div");
+    item.className = "saved-location";
+
+    const label = document.createElement("label");
+    label.className = "inline-control";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = state.activeLocationIds.has(loc.id);
+    checkbox.addEventListener("change", () => {
+      if (checkbox.checked) {
+        state.activeLocationIds.add(loc.id);
+      } else {
+        state.activeLocationIds.delete(loc.id);
+      }
+      state.locationStatus = "";
+      saveLocationPrefs();
+      refreshLocationStatus();
+      void updateView();
+    });
+    label.appendChild(checkbox);
+    const text = document.createElement("span");
+    text.textContent = `${loc.label} (${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)})`;
+    label.appendChild(text);
+    item.appendChild(label);
+
+    const actions = document.createElement("div");
+    actions.className = "saved-location-actions";
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "secondary-button";
+    remove.textContent = "Remove";
+    remove.addEventListener("click", () => {
+      state.savedLocations = state.savedLocations.filter((saved) => saved.id !== loc.id);
+      state.activeLocationIds.delete(loc.id);
+      state.locationStatus = "";
+      saveLocationPrefs();
+      renderSavedLocations();
+      refreshLocationStatus();
+      void updateView();
+    });
+    actions.appendChild(remove);
+    item.appendChild(actions);
+
+    container.appendChild(item);
+  });
+}
+
+function syncLocationControls() {
+  if (!state.currentLocation) {
+    state.includeCurrentLocation = false;
+  }
+  const includeCurrent = document.getElementById("include-current-location");
+  if (includeCurrent) {
+    includeCurrent.checked = Boolean(state.currentLocation && state.includeCurrentLocation);
+    includeCurrent.disabled = !state.currentLocation;
+  }
+
+  const distanceRange = document.getElementById("distance-range");
+  const distanceUnlimited = document.getElementById("distance-unlimited");
+  const distanceValue = document.getElementById("distance-value");
+  if (distanceRange) {
+    const value =
+      state.maxDistanceKm !== null ? state.maxDistanceKm : Number(distanceRange.value) || DEFAULT_DISTANCE_KM;
+    distanceRange.value = String(Math.min(Math.max(value, 1), MAX_DISTANCE_KM));
+  }
+  if (distanceUnlimited) {
+    distanceUnlimited.checked = state.maxDistanceKm === null;
+  }
+  if (distanceRange && distanceUnlimited) {
+    distanceRange.disabled = distanceUnlimited.checked;
+  }
+  if (distanceValue) {
+    if (state.maxDistanceKm === null) {
+      distanceValue.textContent = "No limit";
+    } else {
+      distanceValue.textContent = `${distanceRange ? distanceRange.value : state.maxDistanceKm} km`;
+    }
+  }
+
+  const sortDistance = document.getElementById("sort-distance");
+  const hasActiveLocations = getActiveLocations().length > 0;
+  if (sortDistance) {
+    if (!hasActiveLocations && state.sortByDistance) {
+      state.sortByDistance = false;
+      saveLocationPrefs();
+    }
+    sortDistance.checked = state.sortByDistance;
+    sortDistance.disabled = !hasActiveLocations;
+  }
+
+  renderSavedLocations();
+  refreshLocationStatus();
+}
+
+function setupLocationControls() {
+  loadLocationPrefs();
+
+  const useLocation = document.getElementById("use-location");
+  if (useLocation) {
+    useLocation.addEventListener("click", () => {
+      if (!navigator.geolocation) {
+        setLocationStatus("Geolocation is not supported in this browser.");
+        return;
+      }
+      setLocationStatus("Requesting your location...");
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          state.currentLocation = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          };
+          state.includeCurrentLocation = true;
+          state.locationStatus = "Current location updated.";
+          syncLocationControls();
+          void updateView();
+        },
+        () => {
+          setLocationStatus("Unable to access your location. Please allow access or add a saved location.");
+          syncLocationControls();
+        },
+        { enableHighAccuracy: false, timeout: 10000 }
+      );
+    });
+  }
+
+  const includeCurrent = document.getElementById("include-current-location");
+  if (includeCurrent) {
+    includeCurrent.addEventListener("change", () => {
+      if (!state.currentLocation) {
+        includeCurrent.checked = false;
+        setLocationStatus("Use my location to enable current location filtering.");
+        return;
+      }
+      state.includeCurrentLocation = includeCurrent.checked;
+      state.locationStatus = "";
+      refreshLocationStatus();
+      void updateView();
+    });
+  }
+
+  const distanceRange = document.getElementById("distance-range");
+  const distanceUnlimited = document.getElementById("distance-unlimited");
+  const distanceValue = document.getElementById("distance-value");
+  const updateDistanceLabel = () => {
+    if (!distanceValue || !distanceRange || !distanceUnlimited) return;
+    if (distanceUnlimited.checked) {
+      distanceValue.textContent = "No limit";
+    } else {
+      distanceValue.textContent = `${distanceRange.value} km`;
+    }
+  };
+  if (distanceRange && distanceUnlimited) {
+    distanceRange.addEventListener("input", () => {
+      if (distanceUnlimited.checked) {
+        distanceUnlimited.checked = false;
+        distanceRange.disabled = false;
+      }
+      state.maxDistanceKm = Number(distanceRange.value);
+      state.locationStatus = "";
+      updateDistanceLabel();
+    });
+    distanceRange.addEventListener("change", () => {
+      state.maxDistanceKm = Number(distanceRange.value);
+      state.locationStatus = "";
+      saveLocationPrefs();
+      refreshLocationStatus();
+      void updateView();
+    });
+    distanceUnlimited.addEventListener("change", () => {
+      state.maxDistanceKm = distanceUnlimited.checked
+        ? null
+        : Number(distanceRange.value) || DEFAULT_DISTANCE_KM;
+      if (distanceUnlimited.checked) {
+        distanceRange.disabled = true;
+      } else {
+        distanceRange.disabled = false;
+      }
+      state.locationStatus = "";
+      saveLocationPrefs();
+      updateDistanceLabel();
+      refreshLocationStatus();
+      void updateView();
+    });
+  }
+
+  const sortDistance = document.getElementById("sort-distance");
+  if (sortDistance) {
+    sortDistance.addEventListener("change", () => {
+      if (!getActiveLocations().length) {
+        sortDistance.checked = false;
+        setLocationStatus("Add a saved location or use my location first.");
+        return;
+      }
+      state.sortByDistance = sortDistance.checked;
+      state.locationStatus = "";
+      saveLocationPrefs();
+      refreshLocationStatus();
+      void updateView();
+    });
+  }
+
+  const addLocation = document.getElementById("add-location");
+  if (addLocation) {
+    addLocation.addEventListener("click", () => {
+      const labelInput = document.getElementById("location-label");
+      const latInput = document.getElementById("location-lat");
+      const lngInput = document.getElementById("location-lng");
+      const label = (labelInput && labelInput.value.trim()) || `Location ${state.savedLocations.length + 1}`;
+      const latitude = toNumber(latInput ? latInput.value : null);
+      const longitude = toNumber(lngInput ? lngInput.value : null);
+      if (latitude === null || longitude === null) {
+        setLocationStatus("Enter a valid latitude and longitude to save a location.");
+        return;
+      }
+      if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+        setLocationStatus("Latitude must be between -90 and 90, longitude between -180 and 180.");
+        return;
+      }
+      const location = { id: createLocationId(), label, latitude, longitude };
+      state.savedLocations = [...state.savedLocations, location];
+      state.activeLocationIds.add(location.id);
+      if (labelInput) labelInput.value = "";
+      if (latInput) latInput.value = "";
+      if (lngInput) lngInput.value = "";
+      state.locationStatus = "";
+      saveLocationPrefs();
+      syncLocationControls();
+      void updateView();
+    });
+  }
+
+  syncLocationControls();
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const saved = localStorage.getItem("theme");
   const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -1390,6 +1867,7 @@ document.addEventListener("DOMContentLoaded", () => {
   updateSelectionSummary();
   setupCalendarInteractions();
   setupModalInteractions();
+  setupLocationControls();
 
   const todayButton = document.getElementById("today-button");
   if (todayButton) {

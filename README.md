@@ -11,6 +11,7 @@ Live site:
 - Calendar range selection with results listed below the calendar.
 - Per-day modal detail (with neighbourhood filter) for multi-day ranges.
 - Neighbourhood grouping from west to east.
+- Local-only location filter with saved spots, distance limits, and optional nearest sorting.
 - CSV export of the current results.
 
 ## Data source
@@ -19,10 +20,11 @@ Live site:
 ## How to use
 1. Start on the calendar at `/` and drag across days to select a range (or click a single day).
 2. Choose the activity type and time-of-day filters.
-3. Single-day selections keep the calendar visible while listing results below.
-4. Multi-day selections stay on the calendar and list results below it.
-5. Click a day inside a multi-day range to open a modal detail list with neighbourhood filter.
-6. Use Download CSV to save the current view.
+3. Optionally add saved locations (home/work/school) or use your current location to filter by distance.
+4. Single-day selections keep the calendar visible while listing results below.
+5. Multi-day selections stay on the calendar and list results below it.
+6. Click a day inside a multi-day range to open a modal detail list with neighbourhood filter.
+7. Use Download CSV to save the current view.
 
 ## Notes
 - Reservations are inferred from listing text and may change; check the facility listing if unsure.
