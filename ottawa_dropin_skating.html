@@ -62,6 +62,7 @@
         --text: #1e1f22;
         --muted: #5b6470;
         --card: #ffffff;
+        --modal-bg: #ffffff;
         --border: #e1e4e8;
         --link: #2b5b8c;
         --link-hover: #244b72;
@@ -77,6 +78,7 @@
         --text: #e8ecf1;
         --muted: #a9b2bf;
         --card: #151a21;
+        --modal-bg: #151a21;
         --border: #2a333d;
         --link: #8db5ff;
         --link-hover: #b1c9ff;
@@ -536,6 +538,9 @@
         max-height: 80vh;
         overflow: auto;
       }
+      .day-modal .modal-content {
+        background: var(--modal-bg);
+      }
       .modal-header {
         display: flex;
         align-items: center;
@@ -709,6 +714,7 @@
         --text: #141821;
         --muted: #3f4a5a;
         --card: rgba(255, 255, 255, 0.92);
+        --modal-bg: #ffffff;
         --border: rgba(20, 24, 33, 0.14);
         --link: #1f5fa8;
         --link-hover: #1a4f8a;
@@ -725,6 +731,7 @@
         --text: #eef3fa;
         --muted: #9aa7bd;
         --card: rgba(20, 27, 38, 0.92);
+        --modal-bg: #141b26;
         --border: rgba(148, 163, 184, 0.2);
         --link: #8dc1ff;
         --link-hover: #b7d7ff;

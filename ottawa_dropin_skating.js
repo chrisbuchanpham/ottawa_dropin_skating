@@ -1255,9 +1255,18 @@ function renderCalendarView() {
   filteredRows = locationFiltered.filteredRows;
 
   state.rowsByDate = groupRowsByDate(rows);
+  const { year, month } = state.calendarMonth;
+  const gridCells = buildCalendarCells(year, month);
+  const calendarStartIso = getLocalIsoDate(gridCells[0].date);
+  const calendarEndIso = getLocalIsoDate(gridCells[gridCells.length - 1].date);
+  const calendarDates = iterDates(calendarStartIso, calendarEndIso);
+  let { rows: calendarRows } = buildFilteredRowsWithStatus(calendarDates, category, timeFilters);
+  const calendarLocationFiltered = applyLocationFilters(calendarRows, calendarRows);
+  calendarRows = calendarLocationFiltered.rows;
+  const calendarRowsByDate = groupRowsByDate(calendarRows);
   const counts = {};
   let maxCount = 0;
-  for (const [date, list] of Object.entries(state.rowsByDate)) {
+  for (const [date, list] of Object.entries(calendarRowsByDate)) {
     counts[date] = list.length;
     maxCount = Math.max(maxCount, list.length);
   }
