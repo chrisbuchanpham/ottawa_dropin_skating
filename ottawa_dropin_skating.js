@@ -808,8 +808,6 @@ const state = {
   dragMoved: false,
   dragShift: false,
   previewRange: null,
-  activePointerId: null,
-  calendarGrid: null,
   currentLocation: null,
   mapLocation: null,
   locationSource: null,
@@ -1345,22 +1343,12 @@ function updateHistory(method, stateObj, url) {
 }
 
 function resetDragState() {
-  if (state.calendarGrid && state.activePointerId !== null) {
-    try {
-      if (state.calendarGrid.hasPointerCapture(state.activePointerId)) {
-        state.calendarGrid.releasePointerCapture(state.activePointerId);
-      }
-    } catch (error) {
-      // Ignore capture errors.
-    }
-  }
   state.dragging = false;
   state.dragStart = null;
   state.dragEnd = null;
   state.dragMoved = false;
   state.dragShift = false;
   state.previewRange = null;
-  state.activePointerId = null;
 }
 
 function setModalOpen(isOpen) {
@@ -1493,7 +1481,6 @@ function finalizeDrag() {
 function setupCalendarInteractions() {
   const grid = document.getElementById("calendar-grid");
   if (!grid) return;
-  state.calendarGrid = grid;
 
   grid.addEventListener("pointerdown", (event) => {
     const cell = event.target.closest(".calendar-day");
@@ -1507,13 +1494,11 @@ function setupCalendarInteractions() {
     state.dragMoved = false;
     state.dragShift = event.shiftKey;
     state.previewRange = normalizeRange(iso, iso);
-    state.activePointerId = event.pointerId;
     applyPreviewHighlight();
     updateSelectionSummary();
-    grid.setPointerCapture(event.pointerId);
   });
 
-  grid.addEventListener("pointermove", (event) => {
+  window.addEventListener("pointermove", (event) => {
     if (!state.dragging) return;
     const target = document.elementFromPoint(event.clientX, event.clientY);
     const cell = target ? target.closest(".calendar-day") : null;
@@ -1578,7 +1563,7 @@ function refreshLocationStatus() {
   }
   const activeLocation = getActiveLocation();
   if (!activeLocation) {
-    status.textContent = "Use my location or pick a spot on the map to enable distance filtering.";
+    status.textContent = "Pick a spot on the map or use my location to enable distance filtering.";
     return;
   }
   if (state.maxDistanceKm !== null) {
