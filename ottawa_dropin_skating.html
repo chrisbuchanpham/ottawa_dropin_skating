@@ -402,6 +402,13 @@
         flex-wrap: wrap;
         margin: 1rem 0 0.6rem;
       }
+      .list-view {
+        margin-top: 1.5rem;
+        padding: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--card);
+      }
       .list-date-label {
         font-weight: 600;
         font-size: 1.1rem;
@@ -469,65 +476,6 @@
       .neighbourhood-title {
         margin-top: 1.5rem;
         color: var(--text);
-      }
-      .day-modal {
-        border: none;
-        border-radius: 12px;
-        padding: 0;
-        width: min(92vw, 560px);
-        background: transparent;
-      }
-      .day-modal::backdrop {
-        background: rgba(0, 0, 0, 0.45);
-      }
-      .modal-content {
-        background: var(--card);
-        color: var(--text);
-        border-radius: 12px;
-        border: 1px solid var(--border);
-        padding: 1rem 1.2rem;
-      }
-      .modal-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        margin-bottom: 0.6rem;
-      }
-      .modal-title {
-        font-weight: 600;
-        font-size: 1.05rem;
-      }
-      .modal-body {
-        max-height: 60vh;
-        overflow: auto;
-      }
-      .modal-actions {
-        display: flex;
-        justify-content: flex-end;
-        margin-top: 0.8rem;
-      }
-      .location-card {
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 0.6rem 0.75rem;
-        margin-bottom: 0.6rem;
-        background: var(--card);
-      }
-      .location-card:last-child {
-        margin-bottom: 0;
-      }
-      .location-name {
-        font-weight: 600;
-        margin-bottom: 0.2rem;
-      }
-      .location-meta {
-        font-size: 0.88rem;
-        color: var(--muted);
-      }
-      .location-sessions {
-        margin: 0.4rem 0 0;
-        padding-left: 1.1rem;
       }
       .ad-inline {
         margin: 1rem 0 0.5rem;
@@ -616,10 +564,10 @@
         --link-hover: #1a4f8a;
         --table-head: rgba(15, 23, 42, 0.07);
         --range-bg: #dcecff;
-        --density-1: #dff2ff;
-        --density-2: #6fb7f3;
-        --density-3: #ffb066;
-        --density-4: #f05a5a;
+        --density-1: #e8edf5;
+        --density-2: #c2cfdd;
+        --density-3: #8ea5bd;
+        --density-4: #4f6b8a;
       }
       [data-theme="dark"] {
         --bg: #0b1118;
@@ -632,23 +580,23 @@
         --link-hover: #b7d7ff;
         --table-head: rgba(148, 163, 184, 0.12);
         --range-bg: #1c2d42;
-        --density-1: #1c2e44;
-        --density-2: #2f5580;
-        --density-3: #b87a48;
-        --density-4: #f07a7a;
+        --density-1: #1a2532;
+        --density-2: #243447;
+        --density-3: #314766;
+        --density-4: #4b6fa0;
       }
       body {
         font-family: "Space Grotesk", "Trebuchet MS", "Segoe UI", sans-serif;
         color: var(--text);
         background:
-          radial-gradient(1200px circle at 10% -10%, rgba(173, 216, 255, 0.7), transparent 55%),
-          radial-gradient(900px circle at 90% -20%, rgba(255, 214, 170, 0.4), transparent 50%),
-          linear-gradient(180deg, #f9fbff 0%, var(--bg) 60%, var(--bg-alt) 100%);
+          radial-gradient(1200px circle at 10% -10%, rgba(156, 198, 255, 0.55), transparent 55%),
+          radial-gradient(900px circle at 90% -20%, rgba(196, 208, 230, 0.45), transparent 50%),
+          linear-gradient(180deg, #f8fbff 0%, var(--bg) 60%, var(--bg-alt) 100%);
       }
       [data-theme="dark"] body {
         background:
-          radial-gradient(1200px circle at 10% -10%, rgba(63, 110, 170, 0.35), transparent 55%),
-          radial-gradient(900px circle at 90% -20%, rgba(70, 99, 140, 0.25), transparent 50%),
+          radial-gradient(1200px circle at 10% -10%, rgba(83, 118, 175, 0.35), transparent 55%),
+          radial-gradient(900px circle at 90% -20%, rgba(60, 80, 110, 0.3), transparent 50%),
           linear-gradient(180deg, #0b1118 0%, #101824 60%, #141c27 100%);
       }
       .controls,
@@ -689,9 +637,6 @@
         letter-spacing: 0.08em;
         font-size: 0.72rem;
       }
-      .day-modal[open] .modal-content {
-        animation: modalPop 0.2s ease-out;
-      }
       @keyframes liftIn {
         from {
           opacity: 0;
@@ -700,16 +645,6 @@
         to {
           opacity: 1;
           transform: translateY(0);
-        }
-      }
-      @keyframes modalPop {
-        from {
-          opacity: 0;
-          transform: translateY(8px) scale(0.98);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0) scale(1);
         }
       }
     </style>
@@ -725,8 +660,7 @@
           <div class="selection-title">Selected dates</div>
           <div id="selection-range" class="selection-range"></div>
           <div class="selection-hint hint">
-            Drag across days to select a range. Click a single day for the list view. In multi-day
-            ranges, click a day to see locations.
+            Drag across days to select a range. Results update below the calendar.
           </div>
         </div>
         <div class="controls-actions">
@@ -770,19 +704,16 @@
         <div class="calendar-legend">
           <span class="legend-item"><span class="legend-swatch density-1"></span> Few sessions</span>
           <span class="legend-item"><span class="legend-swatch density-2"></span> Some sessions</span>
-          <span class="legend-item"><span class="legend-swatch density-3"></span> Busy</span>
-          <span class="legend-item"><span class="legend-swatch density-4"></span> Very busy</span>
+          <span class="legend-item"><span class="legend-swatch density-3"></span> More sessions</span>
+          <span class="legend-item"><span class="legend-swatch density-4"></span> Most sessions</span>
         </div>
         <div id="calendar-status" class="calendar-status"></div>
       </div>
     </div>
 
-    <div id="list-view" class="list-view" hidden>
+    <div class="list-view">
       <div class="list-header">
-        <button id="back-to-calendar" class="secondary-button" type="button">
-          Back to calendar
-        </button>
-        <div id="list-date-label" class="list-date-label"></div>
+        <div id="range-title" class="list-date-label"></div>
       </div>
 
       <div id="status"></div>
@@ -790,21 +721,6 @@
       <div id="neighbourhood-filter" class="controls" style="display: none"></div>
       <div id="results"></div>
     </div>
-
-    <dialog id="day-modal" class="day-modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <div id="modal-title" class="modal-title"></div>
-          <button id="modal-close" class="secondary-button" type="button">Close</button>
-        </div>
-        <div id="modal-body" class="modal-body"></div>
-        <div class="modal-actions">
-          <button id="modal-view-list" class="secondary-button" type="button">
-            View full list
-          </button>
-        </div>
-      </div>
-    </dialog>
 
     <script>
       document.addEventListener("DOMContentLoaded", () => {

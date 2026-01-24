@@ -782,7 +782,6 @@ const state = {
   basePath: "/",
   selection: { start: null, end: null },
   calendarMonth: { year: 0, month: 0 },
-  view: "calendar",
   rowsByDate: {},
   dragging: false,
   dragStart: null,
@@ -790,7 +789,6 @@ const state = {
   dragMoved: false,
   dragShift: false,
   previewRange: null,
-  modalDate: null,
 };
 
 function ensureTrailingSlash(path) {
@@ -916,6 +914,14 @@ function updateSelectionSummary() {
     return;
   }
   summary.textContent = `${formatShortDate(range.start)} - ${formatShortDate(range.end)} (${days} days)`;
+}
+
+function updateRouteForSelection(selection, { replace = false } = {}) {
+  if (!selection || !selection.start) return;
+  const normalized = normalizeRange(selection.start, selection.end);
+  const single = normalized.start === normalized.end;
+  const url = single ? `${state.basePath}${normalized.start}` : state.basePath;
+  updateHistory(replace ? "replaceState" : "pushState", { selection: normalized }, url);
 }
 
 function buildCalendarCells(year, month) {
@@ -1044,8 +1050,6 @@ function applyPreviewHighlight() {
 }
 
 function renderCalendarView() {
-  setView("calendar");
-
   const monthLabel = document.getElementById("month-label");
   if (monthLabel) {
     monthLabel.textContent = formatMonthLabel(state.calendarMonth.year, state.calendarMonth.month);
@@ -1072,6 +1076,7 @@ function renderCalendarView() {
   }
 
   renderCalendarGrid(counts, maxCount);
+  renderRangeListView(rows, dates, filteredRows, todayIso);
 
   const calendarStatus = document.getElementById("calendar-status");
   if (calendarStatus) {
@@ -1090,37 +1095,31 @@ function renderCalendarView() {
   }
 }
 
-function renderListView() {
-  setView("list");
-
-  const listLabel = document.getElementById("list-date-label");
+function renderRangeListView(rows, dates, filteredRows, todayIso) {
+  const listLabel = document.getElementById("range-title");
   const status = document.getElementById("status");
   const tableContainer = document.getElementById("results");
   const downloadLink = document.getElementById("download");
   const neighbourhoodFilter = document.getElementById("neighbourhood-filter");
 
-  const dateIso = state.selection.start || getLocalIsoDate(new Date());
-  state.selection = { start: dateIso, end: dateIso };
-  updateSelectionSummary();
   if (listLabel) {
-    listLabel.textContent = formatLongDate(dateIso);
+    const selection = normalizeRange(state.selection.start, state.selection.end);
+    if (selection.start === selection.end) {
+      listLabel.textContent = `Sessions for ${formatLongDate(selection.start)}`;
+    } else {
+      listLabel.textContent = `Sessions for ${formatShortDate(selection.start)} - ${formatShortDate(
+        selection.end
+      )}`;
+    }
   }
   if (status) status.textContent = "Loading data...";
   if (tableContainer) tableContainer.innerHTML = "";
   if (downloadLink) downloadLink.style.display = "none";
 
-  const { category, timeFilters } = getActiveFilters();
-  const dates = iterDates(dateIso, dateIso);
-  const { rows, filteredRows, todayIso } = buildFilteredRowsWithStatus(
-    dates,
-    category,
-    timeFilters
-  );
-
   if (!rows.length) {
     let message = "No matching sessions.";
     if (filteredRows.length && filteredRows.every((row) => row.date === todayIso)) {
-      message = "No more sessions for that day.";
+      message = "No more sessions for today.";
     }
     if (status) status.textContent = message;
     if (tableContainer) tableContainer.innerHTML = "";
@@ -1160,19 +1159,7 @@ async function updateView() {
     return;
   }
 
-  if (state.view === "list") {
-    renderListView();
-  } else {
-    renderCalendarView();
-  }
-}
-
-function setView(view) {
-  state.view = view;
-  const calendarView = document.getElementById("calendar-view");
-  const listView = document.getElementById("list-view");
-  if (calendarView) calendarView.hidden = view !== "calendar";
-  if (listView) listView.hidden = view !== "list";
+  renderCalendarView();
 }
 
 function updateHistory(method, stateObj, url) {
@@ -1183,170 +1170,24 @@ function updateHistory(method, stateObj, url) {
   }
 }
 
-function navigateToCalendar({ replace = false } = {}) {
-  const url = state.basePath;
-  updateHistory(replace ? "replaceState" : "pushState", { view: "calendar" }, url);
-  state.view = "calendar";
-  void updateView();
-}
-
-function navigateToDate(dateIso, { replace = false } = {}) {
-  if (!isValidIsoDate(dateIso)) return;
-  state.selection = { start: dateIso, end: dateIso };
-  setCalendarMonthFromIso(dateIso);
-  const url = `${state.basePath}${dateIso}`;
-  updateHistory(replace ? "replaceState" : "pushState", { view: "list", date: dateIso }, url);
-  state.view = "list";
-  void updateView();
-}
-
-function openDayModal(dateIso) {
-  const modal = document.getElementById("day-modal");
-  const title = document.getElementById("modal-title");
-  const body = document.getElementById("modal-body");
-  if (!modal || !title || !body) return;
-
-  const rows = state.rowsByDate[dateIso] || [];
-  state.modalDate = dateIso;
-  title.textContent = `Sessions on ${formatLongDate(dateIso)}`;
-  body.innerHTML = "";
-
-  if (!rows.length) {
-    body.textContent = "No matching sessions for this day.";
-  } else {
-    const grouped = {};
-    for (const row of rows) {
-      const key = row.facility_url || row.facility_name || row.facility_address || row.activity_name;
-      if (!grouped[key]) {
-        grouped[key] = {
-          name: row.facility_name || "Unknown facility",
-          address: row.facility_address || "",
-          url: row.facility_url || "",
-          sessions: [],
-        };
-      }
-      grouped[key].sessions.push(row);
-    }
-
-    const groups = Object.values(grouped).sort((a, b) => a.name.localeCompare(b.name));
-    for (const group of groups) {
-      group.sessions.sort((a, b) => a.start_time.localeCompare(b.start_time));
-      const card = document.createElement("div");
-      card.className = "location-card";
-
-      const name = document.createElement("div");
-      name.className = "location-name";
-      if (group.url && group.url.startsWith("http")) {
-        const link = document.createElement("a");
-        link.href = group.url;
-        link.target = "_blank";
-        link.rel = "noopener";
-        link.textContent = group.name;
-        name.appendChild(link);
-      } else {
-        name.textContent = group.name;
-      }
-      card.appendChild(name);
-
-      if (group.address) {
-        const meta = document.createElement("div");
-        meta.className = "location-meta";
-        const link = document.createElement("a");
-        const destination = encodeURIComponent(group.address);
-        link.href = `https://www.google.com/maps/search/?api=1&query=${destination}`;
-        link.target = "_blank";
-        link.rel = "noopener";
-        link.textContent = group.address;
-        meta.appendChild(link);
-        card.appendChild(meta);
-      }
-
-      const list = document.createElement("ul");
-      list.className = "location-sessions";
-      for (const session of group.sessions) {
-        const item = document.createElement("li");
-        const time = session.end_time
-          ? `${session.start_time} - ${session.end_time}`
-          : session.start_time || "Time TBD";
-        const label = session.activity_name || session.raw_activity || "Session";
-        item.textContent = `${time} - ${label}`;
-        list.appendChild(item);
-      }
-      card.appendChild(list);
-      body.appendChild(card);
-    }
-  }
-
-  if (typeof modal.showModal === "function") {
-    modal.showModal();
-  } else {
-    modal.setAttribute("open", "");
-  }
-}
-
-function closeDayModal() {
-  const modal = document.getElementById("day-modal");
-  if (!modal) return;
-  state.modalDate = null;
-  if (typeof modal.close === "function") {
-    modal.close();
-  } else {
-    modal.removeAttribute("open");
-  }
-}
-
-function setupModalInteractions() {
-  const modal = document.getElementById("day-modal");
-  const closeButton = document.getElementById("modal-close");
-  const viewButton = document.getElementById("modal-view-list");
-  if (closeButton) {
-    closeButton.addEventListener("click", closeDayModal);
-  }
-  if (viewButton) {
-    viewButton.addEventListener("click", () => {
-      if (state.modalDate) {
-        closeDayModal();
-        navigateToDate(state.modalDate);
-      }
-    });
-  }
-  if (modal) {
-    modal.addEventListener("click", (event) => {
-      if (event.target === modal) {
-        closeDayModal();
-      }
-    });
-    modal.addEventListener("cancel", () => {
-      state.modalDate = null;
-    });
-  }
-}
-
 function handleDayClick(dateIso, shiftKey) {
   if (!dateIso) return;
   const selection = normalizeRange(state.selection.start, state.selection.end);
-  const isMulti = selection.start && selection.end && selection.start !== selection.end;
-  const inRange = isMulti && isIsoInRange(dateIso, selection.start, selection.end);
-
   if (shiftKey && selection.start) {
     const range = normalizeRange(selection.start, dateIso);
     state.selection = range;
     state.previewRange = null;
     updateSelectionSummary();
-    if (range.start !== range.end) {
-      navigateToCalendar();
-    } else {
-      navigateToDate(range.start);
-    }
+    updateRouteForSelection(range);
+    void updateView();
     return;
   }
-
-  if (state.view === "calendar" && isMulti && inRange) {
-    openDayModal(dateIso);
-    return;
-  }
-
-  navigateToDate(dateIso);
+  const range = { start: dateIso, end: dateIso };
+  state.selection = range;
+  state.previewRange = null;
+  updateSelectionSummary();
+  updateRouteForSelection(range);
+  void updateView();
 }
 
 function finalizeDrag() {
@@ -1371,11 +1212,8 @@ function finalizeDrag() {
   const range = normalizeRange(start, end);
   state.selection = range;
   updateSelectionSummary();
-  if (range.start !== range.end) {
-    navigateToCalendar();
-  } else {
-    navigateToDate(range.start);
-  }
+  updateRouteForSelection(range);
+  void updateView();
 }
 
 function setupCalendarInteractions() {
@@ -1467,11 +1305,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const initialDate = dateFromPath || todayIso;
   state.selection = { start: initialDate, end: initialDate };
   setCalendarMonthFromIso(initialDate);
-  state.view = dateFromPath ? "list" : "calendar";
+  if (dateFromPath) {
+    updateRouteForSelection(state.selection, { replace: true });
+  } else {
+    updateHistory("replaceState", { selection: state.selection }, state.basePath);
+  }
 
   updateSelectionSummary();
   setupCalendarInteractions();
-  setupModalInteractions();
 
   const todayButton = document.getElementById("today-button");
   if (todayButton) {
@@ -1479,12 +1320,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const today = getLocalIsoDate(new Date());
       state.selection = { start: today, end: today };
       setCalendarMonthFromIso(today);
-      if (state.view === "list") {
-        navigateToDate(today);
-      } else {
-        updateSelectionSummary();
-        void updateView();
-      }
+      updateSelectionSummary();
+      updateRouteForSelection(state.selection);
+      void updateView();
     });
   }
 
@@ -1494,14 +1332,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const today = getLocalIsoDate(new Date());
       state.selection = { start: today, end: today };
       setCalendarMonthFromIso(today);
-      navigateToCalendar();
-    });
-  }
-
-  const backButton = document.getElementById("back-to-calendar");
-  if (backButton) {
-    backButton.addEventListener("click", () => {
-      navigateToCalendar();
+      updateSelectionSummary();
+      updateRouteForSelection(state.selection);
+      void updateView();
     });
   }
 
@@ -1509,18 +1342,14 @@ document.addEventListener("DOMContentLoaded", () => {
   if (prevMonth) {
     prevMonth.addEventListener("click", () => {
       shiftCalendarMonth(-1);
-      if (state.view === "calendar") {
-        void updateView();
-      }
+      void updateView();
     });
   }
   const nextMonth = document.getElementById("next-month");
   if (nextMonth) {
     nextMonth.addEventListener("click", () => {
       shiftCalendarMonth(1);
-      if (state.view === "calendar") {
-        void updateView();
-      }
+      void updateView();
     });
   }
 
@@ -1531,15 +1360,22 @@ document.addEventListener("DOMContentLoaded", () => {
     input.addEventListener("change", () => void updateView());
   });
 
-  window.addEventListener("popstate", () => {
-    const routedDate = getDateFromPath(window.location.pathname);
-    if (routedDate) {
-      state.selection = { start: routedDate, end: routedDate };
-      setCalendarMonthFromIso(routedDate);
-      state.view = "list";
+  window.addEventListener("popstate", (event) => {
+    if (event.state && event.state.selection) {
+      state.selection = event.state.selection;
+      setCalendarMonthFromIso(state.selection.start);
     } else {
-      state.view = "calendar";
+      const routedDate = getDateFromPath(window.location.pathname);
+      if (routedDate) {
+        state.selection = { start: routedDate, end: routedDate };
+        setCalendarMonthFromIso(routedDate);
+      } else {
+        const today = getLocalIsoDate(new Date());
+        state.selection = { start: today, end: today };
+        setCalendarMonthFromIso(today);
+      }
     }
+    updateSelectionSummary();
     void updateView();
   });
 
