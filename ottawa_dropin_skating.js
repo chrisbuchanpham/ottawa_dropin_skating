@@ -1485,7 +1485,7 @@ function handleDayClick(dateIso, shiftKey) {
   state.previewRange = null;
   updateSelectionSummary();
   updateRouteForSelection(range);
-  void updateView();
+  updateView().then(() => openDayModal(dateIso));
 }
 
 function finalizeDrag() {
