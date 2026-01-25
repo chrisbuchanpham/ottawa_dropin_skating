@@ -812,6 +812,7 @@ const state = {
   previewRange: null,
   calendarListenersBound: false,
   suppressClick: false,
+  singleDateView: "list",
   currentLocation: null,
   mapLocation: null,
   locationSource: null,
@@ -1305,11 +1306,12 @@ function renderRangeListView(rows, dates, filteredRows, todayIso) {
   const listView = document.querySelector(".list-view");
   const selection = normalizeRange(state.selection.start, state.selection.end);
   const isSingle = selection.start && selection.end && selection.start === selection.end;
+  const showSingleList = state.singleDateView !== "modal";
 
   if (listView) {
-    listView.style.display = isSingle ? "none" : "block";
+    listView.style.display = isSingle && !showSingleList ? "none" : "block";
   }
-  if (isSingle) {
+  if (isSingle && !showSingleList) {
     if (status) status.textContent = "";
     if (tableContainer) tableContainer.innerHTML = "";
     if (downloadLink) downloadLink.style.display = "none";
@@ -1318,9 +1320,13 @@ function renderRangeListView(rows, dates, filteredRows, todayIso) {
   }
 
   if (listLabel) {
-    listLabel.textContent = `Sessions for ${formatShortDate(selection.start)} - ${formatShortDate(
-      selection.end
-    )}`;
+    if (isSingle) {
+      listLabel.textContent = `Sessions for ${formatLongDate(selection.start)}`;
+    } else {
+      listLabel.textContent = `Sessions for ${formatShortDate(selection.start)} - ${formatShortDate(
+        selection.end
+      )}`;
+    }
   }
   if (status) status.textContent = "Loading data...";
   if (tableContainer) tableContainer.innerHTML = "";
@@ -1480,9 +1486,14 @@ function handleDayClick(dateIso, shiftKey) {
     const range = normalizeRange(selection.start, dateIso);
     state.selection = range;
     state.previewRange = null;
+    state.singleDateView = range.start === range.end ? "modal" : "list";
     updateSelectionSummary();
     updateRouteForSelection(range);
-    void updateView();
+    if (range.start === range.end) {
+      updateView().then(() => openDayModal(dateIso));
+    } else {
+      void updateView();
+    }
     return;
   }
   if (isMulti && isIsoInRange(dateIso, selection.start, selection.end)) {
@@ -1492,6 +1503,7 @@ function handleDayClick(dateIso, shiftKey) {
   const range = { start: dateIso, end: dateIso };
   state.selection = range;
   state.previewRange = null;
+  state.singleDateView = "modal";
   updateSelectionSummary();
   updateRouteForSelection(range);
   updateView().then(() => openDayModal(dateIso));
@@ -1513,6 +1525,7 @@ function finalizeDrag() {
 
   const range = normalizeRange(start, end);
   state.selection = range;
+  state.singleDateView = "list";
   updateSelectionSummary();
   updateRouteForSelection(range);
   void updateView();
@@ -1899,6 +1912,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const todayIso = getLocalIsoDate(new Date());
   const initialDate = dateFromPath || todayIso;
   state.selection = { start: initialDate, end: initialDate };
+  state.singleDateView = "list";
   setCalendarMonthFromIso(initialDate);
   if (dateFromPath) {
     updateRouteForSelection(state.selection, { replace: true });
@@ -1916,6 +1930,7 @@ document.addEventListener("DOMContentLoaded", () => {
     resetButton.addEventListener("click", () => {
       const today = getLocalIsoDate(new Date());
       state.selection = { start: today, end: today };
+      state.singleDateView = "list";
       setCalendarMonthFromIso(today);
       updateSelectionSummary();
       updateRouteForSelection(state.selection);
@@ -1948,15 +1963,18 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("popstate", (event) => {
     if (event.state && event.state.selection) {
       state.selection = event.state.selection;
+      state.singleDateView = "list";
       setCalendarMonthFromIso(state.selection.start);
     } else {
       const routedDate = getDateFromPath(window.location.pathname);
       if (routedDate) {
         state.selection = { start: routedDate, end: routedDate };
+        state.singleDateView = "list";
         setCalendarMonthFromIso(routedDate);
       } else {
         const today = getLocalIsoDate(new Date());
         state.selection = { start: today, end: today };
+        state.singleDateView = "list";
         setCalendarMonthFromIso(today);
       }
     }
