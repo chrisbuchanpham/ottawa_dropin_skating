@@ -1302,16 +1302,25 @@ function renderRangeListView(rows, dates, filteredRows, todayIso) {
   const tableContainer = document.getElementById("results");
   const downloadLink = document.getElementById("download");
   const neighbourhoodFilter = document.getElementById("neighbourhood-filter");
+  const listView = document.querySelector(".list-view");
+  const selection = normalizeRange(state.selection.start, state.selection.end);
+  const isSingle = selection.start && selection.end && selection.start === selection.end;
+
+  if (listView) {
+    listView.style.display = isSingle ? "none" : "block";
+  }
+  if (isSingle) {
+    if (status) status.textContent = "";
+    if (tableContainer) tableContainer.innerHTML = "";
+    if (downloadLink) downloadLink.style.display = "none";
+    if (neighbourhoodFilter) neighbourhoodFilter.style.display = "none";
+    return;
+  }
 
   if (listLabel) {
-    const selection = normalizeRange(state.selection.start, state.selection.end);
-    if (selection.start === selection.end) {
-      listLabel.textContent = `Sessions for ${formatLongDate(selection.start)}`;
-    } else {
-      listLabel.textContent = `Sessions for ${formatShortDate(selection.start)} - ${formatShortDate(
-        selection.end
-      )}`;
-    }
+    listLabel.textContent = `Sessions for ${formatShortDate(selection.start)} - ${formatShortDate(
+      selection.end
+    )}`;
   }
   if (status) status.textContent = "Loading data...";
   if (tableContainer) tableContainer.innerHTML = "";
