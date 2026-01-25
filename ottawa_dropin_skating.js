@@ -1212,7 +1212,7 @@ function renderCalendarGrid(counts, maxCount) {
     dayNumber.textContent = cellInfo.date.getDate();
     button.appendChild(dayNumber);
 
-    if (count) {
+    if (count && showDensity) {
       const countEl = document.createElement("div");
       countEl.className = "session-count";
       countEl.textContent = `${count} session${count === 1 ? "" : "s"}`;
