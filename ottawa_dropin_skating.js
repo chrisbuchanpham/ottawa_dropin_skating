@@ -1177,6 +1177,7 @@ function renderCalendarGrid(counts, maxCount) {
   grid.innerHTML = "";
 
   const selection = normalizeRange(state.selection.start, state.selection.end);
+  const activeRange = state.previewRange || selection;
   const todayIso = getLocalIsoDate(new Date());
   const { year, month } = state.calendarMonth;
   const cells = buildCalendarCells(year, month);
@@ -1194,8 +1195,12 @@ function renderCalendarGrid(counts, maxCount) {
     }
 
     const count = counts[iso] || 0;
-    const densityClass = getDensityClass(count, maxCount);
-    if (densityClass) button.classList.add(densityClass);
+    const showDensity =
+      activeRange.start && activeRange.end && isIsoInRange(iso, activeRange.start, activeRange.end);
+    if (showDensity) {
+      const densityClass = getDensityClass(count, maxCount);
+      if (densityClass) button.classList.add(densityClass);
+    }
 
     button.setAttribute(
       "aria-label",
