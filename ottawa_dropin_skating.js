@@ -472,18 +472,45 @@ function buildNeighbourhoodOrder(rows, facilities) {
 }
 
 function sortRows(rows, orderMap, { useDistance = false } = {}) {
+  const facilityKeyFor = (row) =>
+    `${row.date}|${row.neighbourhood}|${row.facility_url || row.facility_name || row.facility_address || ""}`;
+  const facilityMinStart = {};
+  const facilityMinDistance = {};
+  for (const row of rows) {
+    const key = facilityKeyFor(row);
+    const minutes = parseTimeToMinutes(row.start_time);
+    const value = minutes === null ? Number.POSITIVE_INFINITY : minutes;
+    if (facilityMinStart[key] === undefined || value < facilityMinStart[key]) {
+      facilityMinStart[key] = value;
+    }
+    if (useDistance) {
+      const dist = row.distance_km;
+      if (dist !== null && dist !== undefined) {
+        if (facilityMinDistance[key] === undefined || dist < facilityMinDistance[key]) {
+          facilityMinDistance[key] = dist;
+        }
+      }
+    }
+  }
   return rows.sort((a, b) => {
     const orderA = orderMap[a.neighbourhood] ?? 9999;
     const orderB = orderMap[b.neighbourhood] ?? 9999;
     if (orderA !== orderB) return orderA - orderB;
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    const keyA = facilityKeyFor(a);
+    const keyB = facilityKeyFor(b);
+    const minTimeA = facilityMinStart[keyA] ?? Number.POSITIVE_INFINITY;
+    const minTimeB = facilityMinStart[keyB] ?? Number.POSITIVE_INFINITY;
+    if (minTimeA !== minTimeB) return minTimeA - minTimeB;
     if (useDistance) {
-      const distA = a.distance_km ?? Number.POSITIVE_INFINITY;
-      const distB = b.distance_km ?? Number.POSITIVE_INFINITY;
+      const distA = facilityMinDistance[keyA] ?? Number.POSITIVE_INFINITY;
+      const distB = facilityMinDistance[keyB] ?? Number.POSITIVE_INFINITY;
       if (distA !== distB) return distA - distB;
     }
-    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    const facilityA = a.facility_url || a.facility_address || a.facility_name || "";
+    const facilityB = b.facility_url || b.facility_address || b.facility_name || "";
+    if (facilityA !== facilityB) return facilityA.localeCompare(facilityB);
     if (a.start_time !== b.start_time) return a.start_time.localeCompare(b.start_time);
-    if (a.facility_name !== b.facility_name) return a.facility_name.localeCompare(b.facility_name);
     return a.activity_name.localeCompare(b.activity_name);
   });
 }
