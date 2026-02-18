@@ -5,26 +5,43 @@ on:
     - cron: "15 6 * * *"
   workflow_dispatch:
 
+concurrency:
+  group: update-dropin-data
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
 
       - name: Fetch latest data
         run: |
           mkdir -p data
-          curl -L -o data/latest.json https://data.ottrec.ca/export/latest.json
+          curl --fail --show-error --location --retry 5 --retry-delay 2 --retry-connrefused --output data/latest.json https://data.ottrec.ca/export/latest.json
 
       - name: Commit if changed
         run: |
-          if git diff --quiet; then
+          git add data/latest.json
+          if git diff --cached --quiet; then
             echo "No changes."
             exit 0
           fi
+          echo "Repository diagnostics before commit/push:"
+          echo "GITHUB_REF=${GITHUB_REF}"
+          echo "GITHUB_REF_NAME=${GITHUB_REF_NAME}"
+          git branch --show-current || true
+          git rev-parse --abbrev-ref HEAD || true
+          git status --short
+          git remote -v
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/latest.json
           git commit -m "Update drop-in data"
-          git push
+          git push origin HEAD:${GITHUB_REF_NAME}
