@@ -65,6 +65,7 @@
           radial-gradient(1200px circle at 10% -10%, var(--bg-glow-a), transparent 55%),
           radial-gradient(900px circle at 90% -20%, var(--bg-glow-b), transparent 50%),
           linear-gradient(180deg, var(--bg-accent-top) 0%, var(--bg) 58%, var(--bg-base) 100%);
+        overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
         touch-action: pan-y;
       }
@@ -123,8 +124,10 @@
 
       .hero-title {
         margin: 0;
-        font-size: clamp(1.5rem, 3vw, 2.2rem);
-        line-height: 1.1;
+        color: var(--text);
+        font-size: clamp(1.95rem, 4.1vw, 3.1rem);
+        line-height: 1.05;
+        font-weight: 700;
       }
 
       .hero-subtitle {
@@ -321,6 +324,7 @@
         align-items: center;
         justify-content: center;
         padding: 0.4rem 0.8rem;
+        min-height: 2.5rem;
         border-radius: 999px;
         border: 1px solid var(--border);
         background: var(--card);
@@ -853,10 +857,26 @@
           flex-direction: column;
         }
 
+        .hero-title {
+          font-size: clamp(2.05rem, 8.5vw, 2.65rem);
+          line-height: 1.05;
+        }
+
+        .hero-subtitle {
+          color: var(--text);
+          font-size: 1.08rem;
+          line-height: 1.35;
+        }
+
         .project-links {
           width: 100%;
           justify-content: flex-start;
           flex-wrap: wrap;
+        }
+
+        .project-links .secondary-button {
+          min-height: 2.65rem;
+          padding: 0.45rem 0.95rem;
         }
 
         .results-toolbar {
@@ -865,11 +885,13 @@
 
         .toolbar-field {
           width: 100%;
-          justify-content: space-between;
+          display: grid;
+          gap: 0.35rem;
         }
 
         .toolbar-field select {
-          width: 60%;
+          width: 100%;
+          min-height: 2.5rem;
         }
 
         .calendar-day {
@@ -906,9 +928,9 @@
         }
 
         .results-table td {
-          display: flex;
-          gap: 0.6rem;
-          padding: 0.35rem 0;
+          display: grid;
+          gap: 0.2rem;
+          padding: 0.45rem 0;
           border-bottom: 1px solid var(--border);
         }
 
@@ -919,8 +941,7 @@
         .results-table td::before {
           content: attr(data-label);
           font-weight: 700;
-          width: 120px;
-          flex: 0 0 auto;
+          width: auto;
         }
       }
 
