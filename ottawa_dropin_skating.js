@@ -1975,11 +1975,11 @@ function applyTheme(theme) {
   const toggle = document.getElementById("theme-toggle");
   if (toggle) {
     if (theme === "dark") {
-      toggle.textContent = "☀️";
+      toggle.textContent = "\u2600\uFE0F";
       toggle.setAttribute("aria-label", "Switch to light mode");
       toggle.setAttribute("title", "Switch to light mode");
     } else {
-      toggle.textContent = "🌙";
+      toggle.textContent = "\uD83C\uDF19";
       toggle.setAttribute("aria-label", "Switch to dark mode");
       toggle.setAttribute("title", "Switch to dark mode");
     }
