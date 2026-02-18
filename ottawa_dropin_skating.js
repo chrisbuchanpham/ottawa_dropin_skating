@@ -209,8 +209,6 @@ const RESERVATION_NOT_REQUIRED_TERMS = [
 const RESERVATION_REQUIRED_TERMS = ["reservation required", "reservations required"];
 const DEFAULT_DISTANCE_KM = 15;
 const MAX_DISTANCE_KM = 50;
-const VIEW_MODE_CARDS = "cards";
-const VIEW_MODE_TABLE = "table";
 
 function normalizeMatchText(value) {
   return String(value || "")
@@ -738,153 +736,8 @@ function renderTable(rows, orderMap, container) {
   }
 }
 
-function renderCards(rows, orderMap, container) {
-  container.innerHTML = "";
-  if (!rows.length) {
-    container.textContent = "No matching sessions.";
-    return;
-  }
-
-  const grouped = {};
-  for (const row of rows) {
-    const neighbourhoodGroup = grouped[row.neighbourhood] || {};
-    const facilityKey = row.facility_url || row.facility_name || row.facility_address || "unknown-facility";
-    if (!neighbourhoodGroup[facilityKey]) {
-      neighbourhoodGroup[facilityKey] = {
-        facility_name: row.facility_name,
-        facility_url: row.facility_url,
-        facility_address: row.facility_address,
-        sessions: [],
-      };
-    }
-    neighbourhoodGroup[facilityKey].sessions.push(row);
-    grouped[row.neighbourhood] = neighbourhoodGroup;
-  }
-
-  const neighbourhoods = Object.keys(grouped).sort(
-    (a, b) => (orderMap[a] ?? 9999) - (orderMap[b] ?? 9999)
-  );
-
-  for (const neighbourhood of neighbourhoods) {
-    const heading = document.createElement("h3");
-    heading.textContent = `Neighbourhood: ${neighbourhood}`;
-    heading.className = "neighbourhood-title";
-    heading.id = neighbourhoodAnchorId(neighbourhood, container.id || "results");
-    heading.dataset.neighbourhood = neighbourhood;
-    container.appendChild(heading);
-
-    const cardsWrapper = document.createElement("div");
-    cardsWrapper.className = "results-cards";
-    const grid = document.createElement("div");
-    grid.className = "card-grid";
-
-    const facilityCards = Object.values(grouped[neighbourhood]);
-    for (const cardData of facilityCards) {
-      const card = document.createElement("article");
-      card.className = "session-card";
-
-      const title = document.createElement("h4");
-      if (cardData.facility_url) {
-        const facilityLink = document.createElement("a");
-        facilityLink.href = cardData.facility_url;
-        facilityLink.target = "_blank";
-        facilityLink.rel = "noopener";
-        facilityLink.textContent = cardData.facility_name || cardData.facility_url;
-        title.appendChild(facilityLink);
-      } else {
-        title.textContent = cardData.facility_name || "Facility";
-      }
-      card.appendChild(title);
-
-      const address = document.createElement("div");
-      address.className = "address";
-      if (cardData.facility_address) {
-        const destination = encodeURIComponent(cardData.facility_address);
-        const addressLink = document.createElement("a");
-        addressLink.href = `https://www.google.com/maps/search/?api=1&query=${destination}`;
-        addressLink.target = "_blank";
-        addressLink.rel = "noopener";
-        addressLink.textContent = cardData.facility_address;
-        address.appendChild(addressLink);
-      } else {
-        address.textContent = "Address not listed";
-      }
-      card.appendChild(address);
-
-      const sessions = cardData.sessions.slice().sort((a, b) => {
-        if (a.date !== b.date) return a.date.localeCompare(b.date);
-        const aMinutes = parseTimeToMinutes(a.start_time) ?? Number.POSITIVE_INFINITY;
-        const bMinutes = parseTimeToMinutes(b.start_time) ?? Number.POSITIVE_INFINITY;
-        if (aMinutes !== bMinutes) return aMinutes - bMinutes;
-        return a.activity_name.localeCompare(b.activity_name);
-      });
-      const sessionList = document.createElement("ul");
-      sessionList.className = "session-list";
-      for (const session of sessions) {
-        const item = document.createElement("li");
-        const timeLabel = formatTimeRange(session.start_time, session.end_time);
-        item.textContent = `${formatShortDate(session.date)} | ${timeLabel} | ${session.activity_name}`;
-        if (session.reservation_required) {
-          const links = session.reservation_links ? session.reservation_links.split(";") : [];
-          const firstLink = links.find((value) => value.trim()) || "";
-          if (firstLink) {
-            item.appendChild(document.createTextNode(" | "));
-            const reservationLink = document.createElement("a");
-            reservationLink.href = firstLink;
-            reservationLink.target = "_blank";
-            reservationLink.rel = "noopener";
-            reservationLink.textContent = "Reservation required";
-            item.appendChild(reservationLink);
-          } else {
-            item.appendChild(document.createTextNode(" | Reservation required"));
-          }
-        }
-        sessionList.appendChild(item);
-      }
-      card.appendChild(sessionList);
-
-      grid.appendChild(card);
-    }
-
-    cardsWrapper.appendChild(grid);
-    container.appendChild(cardsWrapper);
-  }
-}
-
-function renderRows(rows, orderMap, container, viewMode) {
-  if (viewMode === VIEW_MODE_TABLE) {
-    renderTable(rows, orderMap, container);
-    return;
-  }
-  renderCards(rows, orderMap, container);
-}
-
-function getOrderedNeighbourhoods(rows, orderMap) {
-  return Array.from(new Set(rows.map((row) => row.neighbourhood))).sort(
-    (a, b) => (orderMap[a] ?? 9999) - (orderMap[b] ?? 9999)
-  );
-}
-
-function updateNeighbourhoodJump(rows, orderMap) {
-  const select = document.getElementById("neighbourhood-jump");
-  if (!select) return;
-
-  const ordered = getOrderedNeighbourhoods(rows, orderMap);
-  select.innerHTML = "";
-  const placeholder = document.createElement("option");
-  placeholder.value = "";
-  placeholder.textContent = "Select...";
-  select.appendChild(placeholder);
-
-  for (const neighbourhood of ordered) {
-    const option = document.createElement("option");
-    option.value = neighbourhood;
-    option.textContent = neighbourhood;
-    select.appendChild(option);
-  }
-
-  select.disabled = ordered.length === 0;
-  select.value = "";
+function renderRows(rows, orderMap, container) {
+  renderTable(rows, orderMap, container);
 }
 
 function buildCsv(rows, orderMap) {
@@ -1035,7 +888,6 @@ const state = {
   selection: { start: null, end: null },
   calendarMonth: { year: 0, month: 0 },
   rowsByDate: {},
-  viewMode: VIEW_MODE_CARDS,
   sortMode: "neighbourhood",
   activeLocation: null,
   dataRefreshedAt: "",
@@ -1172,21 +1024,6 @@ function updateDataFreshnessBadge() {
   badge.textContent = `Updated from ottrec feed: ${formatShortDate(state.dataRefreshedAt)} (${sourceLabel})`;
 }
 
-function syncViewModeButtons() {
-  const cardsButton = document.getElementById("view-mode-cards");
-  const tableButton = document.getElementById("view-mode-table");
-  if (cardsButton) {
-    const active = state.viewMode === VIEW_MODE_CARDS;
-    cardsButton.classList.toggle("is-active", active);
-    cardsButton.setAttribute("aria-pressed", String(active));
-  }
-  if (tableButton) {
-    const active = state.viewMode === VIEW_MODE_TABLE;
-    tableButton.classList.toggle("is-active", active);
-    tableButton.setAttribute("aria-pressed", String(active));
-  }
-}
-
 function updateResultsSummary(rows, filteredRows, dates, category, timeFilters, selectedNeighbourhood) {
   const summary = document.getElementById("results-summary");
   if (!summary) return;
@@ -1217,13 +1054,6 @@ function updateResultsSummary(rows, filteredRows, dates, category, timeFilters, 
     `${rows.length} sessions shown (${filteredRows.length} matching selected activity/time) ` +
     `across ${neighbourhoodCount} neighbourhoods and ${dates.length} day${dates.length === 1 ? "" : "s"}. ` +
     parts.join(" | ");
-}
-
-function scrollToNeighbourhood(neighbourhood) {
-  if (!neighbourhood) return;
-  const target = document.getElementById(neighbourhoodAnchorId(neighbourhood, "results"));
-  if (!target) return;
-  target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function normalizeRange(start, end) {
@@ -1636,7 +1466,6 @@ function renderRangeListView(rows, dates, filteredRows, todayIso, category, time
     if (downloadLink) downloadLink.style.display = "none";
     if (neighbourhoodFilter) neighbourhoodFilter.style.display = "none";
     updateResultsSummary([], filteredRows, dates, category, timeFilters, "__all__");
-    updateNeighbourhoodJump([], {});
     return;
   }
 
@@ -1662,7 +1491,6 @@ function renderRangeListView(rows, dates, filteredRows, todayIso, category, time
     if (tableContainer) tableContainer.innerHTML = "";
     if (neighbourhoodFilter) neighbourhoodFilter.style.display = "none";
     updateResultsSummary([], filteredRows, dates, category, timeFilters, "__all__");
-    updateNeighbourhoodJump([], {});
     return;
   }
 
@@ -1675,10 +1503,9 @@ function renderRangeListView(rows, dates, filteredRows, todayIso, category, time
   const applySelection = (selectedRows, selectedNeighbourhood = "__all__") => {
     const label = state.source === "remote" ? " (fallback data)" : "";
     if (status) status.textContent = `Found ${selectedRows.length} sessions.${label}`;
-    if (tableContainer) renderRows(selectedRows, orderMap, tableContainer, state.viewMode);
+    if (tableContainer) renderRows(selectedRows, orderMap, tableContainer);
     if (downloadLink) updateDownloadLink(selectedRows, orderMap, dates, downloadLink);
     updateResultsSummary(selectedRows, filteredRows, dates, category, timeFilters, selectedNeighbourhood);
-    updateNeighbourhoodJump(selectedRows, orderMap);
   };
 
   if (!neighbourhoodFilter) {
@@ -1760,7 +1587,7 @@ function openDayModal(dateIso) {
     const applySelection = (filteredRows) => {
       const label = state.source === "remote" ? " (fallback data)" : "";
       status.textContent = `Found ${filteredRows.length} sessions.${label}`;
-      renderRows(filteredRows, orderMap, results, state.viewMode);
+      renderRows(filteredRows, orderMap, results);
       if (downloadLink) updateDownloadLink(filteredRows, orderMap, dates, downloadLink);
     };
     if (!filter) {
@@ -2254,34 +2081,7 @@ document.addEventListener("DOMContentLoaded", () => {
     sourceLink.href = SOURCE_DATA_URL;
   }
   updateDataFreshnessBadge();
-
-  const savedViewMode = localStorage.getItem("view-mode");
-  if (savedViewMode === VIEW_MODE_CARDS || savedViewMode === VIEW_MODE_TABLE) {
-    state.viewMode = savedViewMode;
-  }
-  syncViewModeButtons();
-
-  const viewCardsButton = document.getElementById("view-mode-cards");
-  if (viewCardsButton) {
-    viewCardsButton.addEventListener("click", () => {
-      if (state.viewMode === VIEW_MODE_CARDS) return;
-      state.viewMode = VIEW_MODE_CARDS;
-      localStorage.setItem("view-mode", state.viewMode);
-      syncViewModeButtons();
-      void updateView();
-    });
-  }
-
-  const viewTableButton = document.getElementById("view-mode-table");
-  if (viewTableButton) {
-    viewTableButton.addEventListener("click", () => {
-      if (state.viewMode === VIEW_MODE_TABLE) return;
-      state.viewMode = VIEW_MODE_TABLE;
-      localStorage.setItem("view-mode", state.viewMode);
-      syncViewModeButtons();
-      void updateView();
-    });
-  }
+  localStorage.removeItem("view-mode");
 
   const sortMode = document.getElementById("results-sort-mode");
   if (sortMode) {
@@ -2289,13 +2089,6 @@ document.addEventListener("DOMContentLoaded", () => {
     sortMode.addEventListener("change", () => {
       state.sortMode = sortMode.value === "date" ? "date" : "neighbourhood";
       void updateView();
-    });
-  }
-
-  const neighbourhoodJump = document.getElementById("neighbourhood-jump");
-  if (neighbourhoodJump) {
-    neighbourhoodJump.addEventListener("change", () => {
-      scrollToNeighbourhood(neighbourhoodJump.value);
     });
   }
 
