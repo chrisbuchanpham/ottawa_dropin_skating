@@ -1,6 +1,7 @@
 const DATA_URL = "./data/latest.json";
 const FALLBACK_DATA_URL =
   "https://raw.githubusercontent.com/chrisbuchanpham/ottawa_dropin_skating/main/data/latest.json";
+const SOURCE_DATA_URL = "https://data.ottrec.ca/export/latest.json";
 const EXCLUDED_TERMS = [
   "ringette",
   "figure skate",
@@ -208,6 +209,8 @@ const RESERVATION_NOT_REQUIRED_TERMS = [
 const RESERVATION_REQUIRED_TERMS = ["reservation required", "reservations required"];
 const DEFAULT_DISTANCE_KM = 15;
 const MAX_DISTANCE_KM = 50;
+const VIEW_MODE_CARDS = "cards";
+const VIEW_MODE_TABLE = "table";
 
 function normalizeMatchText(value) {
   return String(value || "")
@@ -471,7 +474,7 @@ function buildNeighbourhoodOrder(rows, facilities) {
   return orderMap;
 }
 
-function sortRows(rows, orderMap, { useDistance = false } = {}) {
+function sortRows(rows, orderMap, { useDistance = false, sortMode = "neighbourhood" } = {}) {
   const facilityKeyFor = (row) =>
     `${row.date}|${row.neighbourhood}|${row.facility_url || row.facility_name || row.facility_address || ""}`;
   const facilityMinStart = {};
@@ -493,19 +496,32 @@ function sortRows(rows, orderMap, { useDistance = false } = {}) {
     }
   }
   return rows.sort((a, b) => {
-    const orderA = orderMap[a.neighbourhood] ?? 9999;
-    const orderB = orderMap[b.neighbourhood] ?? 9999;
-    if (orderA !== orderB) return orderA - orderB;
-    if (a.date !== b.date) return a.date.localeCompare(b.date);
     const keyA = facilityKeyFor(a);
     const keyB = facilityKeyFor(b);
     const minTimeA = facilityMinStart[keyA] ?? Number.POSITIVE_INFINITY;
     const minTimeB = facilityMinStart[keyB] ?? Number.POSITIVE_INFINITY;
-    if (minTimeA !== minTimeB) return minTimeA - minTimeB;
-    if (useDistance) {
-      const distA = facilityMinDistance[keyA] ?? Number.POSITIVE_INFINITY;
-      const distB = facilityMinDistance[keyB] ?? Number.POSITIVE_INFINITY;
-      if (distA !== distB) return distA - distB;
+    if (sortMode === "date") {
+      if (a.date !== b.date) return a.date.localeCompare(b.date);
+      if (minTimeA !== minTimeB) return minTimeA - minTimeB;
+      if (useDistance) {
+        const distA = facilityMinDistance[keyA] ?? Number.POSITIVE_INFINITY;
+        const distB = facilityMinDistance[keyB] ?? Number.POSITIVE_INFINITY;
+        if (distA !== distB) return distA - distB;
+      }
+      const orderA = orderMap[a.neighbourhood] ?? 9999;
+      const orderB = orderMap[b.neighbourhood] ?? 9999;
+      if (orderA !== orderB) return orderA - orderB;
+    } else {
+      const orderA = orderMap[a.neighbourhood] ?? 9999;
+      const orderB = orderMap[b.neighbourhood] ?? 9999;
+      if (orderA !== orderB) return orderA - orderB;
+      if (a.date !== b.date) return a.date.localeCompare(b.date);
+      if (minTimeA !== minTimeB) return minTimeA - minTimeB;
+      if (useDistance) {
+        const distA = facilityMinDistance[keyA] ?? Number.POSITIVE_INFINITY;
+        const distB = facilityMinDistance[keyB] ?? Number.POSITIVE_INFINITY;
+        if (distA !== distB) return distA - distB;
+      }
     }
     const facilityA = a.facility_url || a.facility_address || a.facility_name || "";
     const facilityB = b.facility_url || b.facility_address || b.facility_name || "";
@@ -570,6 +586,43 @@ function isSessionUpcoming(row, todayIso, nowMinutes) {
   return true;
 }
 
+function toSlug(value) {
+  return normalizeMatchText(value || "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function neighbourhoodAnchorId(neighbourhood, scopeId = "results") {
+  return `${scopeId}-neighbourhood-${toSlug(neighbourhood)}`;
+}
+
+function formatTimeRange(start, end) {
+  if (start && end) {
+    return `${start} - ${end}`;
+  }
+  if (start) {
+    return start;
+  }
+  return "Time not listed";
+}
+
+function formatCategoryLabel(category) {
+  if (category === "adult-hockey") return "Adult hockey (18+)";
+  if (category === "youth-hockey") return "Youth hockey";
+  return "Skating";
+}
+
+function formatTimeFiltersLabel(timeFilters) {
+  if (!timeFilters.length) {
+    return "All day";
+  }
+  const labels = [];
+  if (timeFilters.includes("morning")) labels.push("Morning");
+  if (timeFilters.includes("afternoon")) labels.push("Afternoon");
+  if (timeFilters.includes("evening")) labels.push("Evening");
+  return labels.join(", ");
+}
+
 function renderTable(rows, orderMap, container) {
   container.innerHTML = "";
   if (!rows.length) {
@@ -588,6 +641,8 @@ function renderTable(rows, orderMap, container) {
     const heading = document.createElement("h3");
     heading.textContent = `Neighbourhood: ${neighbourhood}`;
     heading.className = "neighbourhood-title";
+    heading.id = neighbourhoodAnchorId(neighbourhood, container.id || "results");
+    heading.dataset.neighbourhood = neighbourhood;
     container.appendChild(heading);
 
     const table = document.createElement("table");
@@ -681,6 +736,155 @@ function renderTable(rows, orderMap, container) {
     table.appendChild(tbody);
     container.appendChild(table);
   }
+}
+
+function renderCards(rows, orderMap, container) {
+  container.innerHTML = "";
+  if (!rows.length) {
+    container.textContent = "No matching sessions.";
+    return;
+  }
+
+  const grouped = {};
+  for (const row of rows) {
+    const neighbourhoodGroup = grouped[row.neighbourhood] || {};
+    const facilityKey = row.facility_url || row.facility_name || row.facility_address || "unknown-facility";
+    if (!neighbourhoodGroup[facilityKey]) {
+      neighbourhoodGroup[facilityKey] = {
+        facility_name: row.facility_name,
+        facility_url: row.facility_url,
+        facility_address: row.facility_address,
+        sessions: [],
+      };
+    }
+    neighbourhoodGroup[facilityKey].sessions.push(row);
+    grouped[row.neighbourhood] = neighbourhoodGroup;
+  }
+
+  const neighbourhoods = Object.keys(grouped).sort(
+    (a, b) => (orderMap[a] ?? 9999) - (orderMap[b] ?? 9999)
+  );
+
+  for (const neighbourhood of neighbourhoods) {
+    const heading = document.createElement("h3");
+    heading.textContent = `Neighbourhood: ${neighbourhood}`;
+    heading.className = "neighbourhood-title";
+    heading.id = neighbourhoodAnchorId(neighbourhood, container.id || "results");
+    heading.dataset.neighbourhood = neighbourhood;
+    container.appendChild(heading);
+
+    const cardsWrapper = document.createElement("div");
+    cardsWrapper.className = "results-cards";
+    const grid = document.createElement("div");
+    grid.className = "card-grid";
+
+    const facilityCards = Object.values(grouped[neighbourhood]);
+    for (const cardData of facilityCards) {
+      const card = document.createElement("article");
+      card.className = "session-card";
+
+      const title = document.createElement("h4");
+      if (cardData.facility_url) {
+        const facilityLink = document.createElement("a");
+        facilityLink.href = cardData.facility_url;
+        facilityLink.target = "_blank";
+        facilityLink.rel = "noopener";
+        facilityLink.textContent = cardData.facility_name || cardData.facility_url;
+        title.appendChild(facilityLink);
+      } else {
+        title.textContent = cardData.facility_name || "Facility";
+      }
+      card.appendChild(title);
+
+      const address = document.createElement("div");
+      address.className = "address";
+      if (cardData.facility_address) {
+        const destination = encodeURIComponent(cardData.facility_address);
+        const addressLink = document.createElement("a");
+        addressLink.href = `https://www.google.com/maps/search/?api=1&query=${destination}`;
+        addressLink.target = "_blank";
+        addressLink.rel = "noopener";
+        addressLink.textContent = cardData.facility_address;
+        address.appendChild(addressLink);
+      } else {
+        address.textContent = "Address not listed";
+      }
+      card.appendChild(address);
+
+      const sessions = cardData.sessions.slice().sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        const aMinutes = parseTimeToMinutes(a.start_time) ?? Number.POSITIVE_INFINITY;
+        const bMinutes = parseTimeToMinutes(b.start_time) ?? Number.POSITIVE_INFINITY;
+        if (aMinutes !== bMinutes) return aMinutes - bMinutes;
+        return a.activity_name.localeCompare(b.activity_name);
+      });
+      const sessionList = document.createElement("ul");
+      sessionList.className = "session-list";
+      for (const session of sessions) {
+        const item = document.createElement("li");
+        const timeLabel = formatTimeRange(session.start_time, session.end_time);
+        item.textContent = `${formatShortDate(session.date)} | ${timeLabel} | ${session.activity_name}`;
+        if (session.reservation_required) {
+          const links = session.reservation_links ? session.reservation_links.split(";") : [];
+          const firstLink = links.find((value) => value.trim()) || "";
+          if (firstLink) {
+            item.appendChild(document.createTextNode(" | "));
+            const reservationLink = document.createElement("a");
+            reservationLink.href = firstLink;
+            reservationLink.target = "_blank";
+            reservationLink.rel = "noopener";
+            reservationLink.textContent = "Reservation required";
+            item.appendChild(reservationLink);
+          } else {
+            item.appendChild(document.createTextNode(" | Reservation required"));
+          }
+        }
+        sessionList.appendChild(item);
+      }
+      card.appendChild(sessionList);
+
+      grid.appendChild(card);
+    }
+
+    cardsWrapper.appendChild(grid);
+    container.appendChild(cardsWrapper);
+  }
+}
+
+function renderRows(rows, orderMap, container, viewMode) {
+  if (viewMode === VIEW_MODE_TABLE) {
+    renderTable(rows, orderMap, container);
+    return;
+  }
+  renderCards(rows, orderMap, container);
+}
+
+function getOrderedNeighbourhoods(rows, orderMap) {
+  return Array.from(new Set(rows.map((row) => row.neighbourhood))).sort(
+    (a, b) => (orderMap[a] ?? 9999) - (orderMap[b] ?? 9999)
+  );
+}
+
+function updateNeighbourhoodJump(rows, orderMap) {
+  const select = document.getElementById("neighbourhood-jump");
+  if (!select) return;
+
+  const ordered = getOrderedNeighbourhoods(rows, orderMap);
+  select.innerHTML = "";
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Select...";
+  select.appendChild(placeholder);
+
+  for (const neighbourhood of ordered) {
+    const option = document.createElement("option");
+    option.value = neighbourhood;
+    option.textContent = neighbourhood;
+    select.appendChild(option);
+  }
+
+  select.disabled = ordered.length === 0;
+  select.value = "";
 }
 
 function buildCsv(rows, orderMap) {
@@ -806,9 +1010,9 @@ function renderNeighbourhoodFilter(rows, orderMap, container, onSelect) {
       button.classList.toggle("active", button.dataset.value === value);
     });
     if (value === "__all__") {
-      onSelect(rows);
+      onSelect(rows, value);
     } else {
-      onSelect(rows.filter((row) => row.neighbourhood === value));
+      onSelect(rows.filter((row) => row.neighbourhood === value), value);
     }
   };
 
@@ -831,6 +1035,10 @@ const state = {
   selection: { start: null, end: null },
   calendarMonth: { year: 0, month: 0 },
   rowsByDate: {},
+  viewMode: VIEW_MODE_CARDS,
+  sortMode: "neighbourhood",
+  activeLocation: null,
+  dataRefreshedAt: "",
   dragging: false,
   dragStart: null,
   dragEnd: null,
@@ -938,6 +1146,84 @@ function formatMonthLabel(year, month) {
     month: "long",
     year: "numeric",
   });
+}
+
+function getLatestScrapedDate(data) {
+  const scrapedDates = (data && data.facility ? data.facility : [])
+    .map((facility) => String(facility.scrapedAt || "").trim())
+    .filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value));
+  if (!scrapedDates.length) {
+    return "";
+  }
+  scrapedDates.sort();
+  return scrapedDates[scrapedDates.length - 1];
+}
+
+function updateDataFreshnessBadge() {
+  const badge = document.getElementById("data-freshness");
+  if (!badge) return;
+
+  const sourceLabel = state.source === "remote" ? "fallback copy" : "live feed";
+  if (!state.dataRefreshedAt) {
+    badge.textContent = `Updated from ottrec feed: unavailable (${sourceLabel})`;
+    return;
+  }
+
+  badge.textContent = `Updated from ottrec feed: ${formatShortDate(state.dataRefreshedAt)} (${sourceLabel})`;
+}
+
+function syncViewModeButtons() {
+  const cardsButton = document.getElementById("view-mode-cards");
+  const tableButton = document.getElementById("view-mode-table");
+  if (cardsButton) {
+    const active = state.viewMode === VIEW_MODE_CARDS;
+    cardsButton.classList.toggle("is-active", active);
+    cardsButton.setAttribute("aria-pressed", String(active));
+  }
+  if (tableButton) {
+    const active = state.viewMode === VIEW_MODE_TABLE;
+    tableButton.classList.toggle("is-active", active);
+    tableButton.setAttribute("aria-pressed", String(active));
+  }
+}
+
+function updateResultsSummary(rows, filteredRows, dates, category, timeFilters, selectedNeighbourhood) {
+  const summary = document.getElementById("results-summary");
+  if (!summary) return;
+
+  const neighbourhoodCount = new Set(rows.map((row) => row.neighbourhood)).size;
+  const selectedNeighbourhoodLabel =
+    selectedNeighbourhood && selectedNeighbourhood !== "__all__" ? selectedNeighbourhood : "All";
+  const parts = [
+    `Activity: ${formatCategoryLabel(category)}`,
+    `Time: ${formatTimeFiltersLabel(timeFilters)}`,
+    `Neighbourhood: ${selectedNeighbourhoodLabel}`,
+    `Sort: ${state.sortMode === "date" ? "Date then time" : "Neighbourhood"}`,
+  ];
+
+  if (state.activeLocation) {
+    if (state.maxDistanceKm !== null) {
+      parts.push(`Location: within ${state.maxDistanceKm} km`);
+    } else if (state.sortByDistance) {
+      parts.push("Location: nearest first");
+    } else {
+      parts.push("Location: active");
+    }
+  } else {
+    parts.push("Location: none");
+  }
+
+  summary.textContent =
+    `${rows.length} sessions shown (${filteredRows.length} matching selected activity/time) ` +
+    `across ${neighbourhoodCount} neighbourhoods and ${dates.length} day${dates.length === 1 ? "" : "s"}. ` +
+    parts.join(" | ");
+}
+
+function scrollToNeighbourhood(neighbourhood) {
+  if (!neighbourhood) return;
+  const target = document.getElementById(neighbourhoodAnchorId(neighbourhood, "results"));
+  if (!target) return;
+  target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function normalizeRange(start, end) {
@@ -1192,10 +1478,15 @@ function buildFilteredRowsWithStatus(dates, category, timeFilters) {
 }
 
 async function ensureData() {
-  if (state.data) return state.data;
+  if (state.data) {
+    updateDataFreshnessBadge();
+    return state.data;
+  }
   const { data, source } = await fetchData();
   state.data = data;
   state.source = source;
+  state.dataRefreshedAt = getLatestScrapedDate(data);
+  updateDataFreshnessBadge();
   return data;
 }
 
@@ -1286,6 +1577,7 @@ function renderCalendarView() {
   const locationFiltered = applyLocationFilters(rows, filteredRows);
   rows = locationFiltered.rows;
   filteredRows = locationFiltered.filteredRows;
+  state.activeLocation = locationFiltered.activeLocation;
 
   state.rowsByDate = groupRowsByDate(rows);
   const { year, month } = state.calendarMonth;
@@ -1305,7 +1597,7 @@ function renderCalendarView() {
   }
 
   renderCalendarGrid(counts, maxCount);
-  renderRangeListView(rows, dates, filteredRows, todayIso);
+  renderRangeListView(rows, dates, filteredRows, todayIso, category, timeFilters);
 
   const calendarStatus = document.getElementById("calendar-status");
   if (calendarStatus) {
@@ -1324,7 +1616,7 @@ function renderCalendarView() {
   }
 }
 
-function renderRangeListView(rows, dates, filteredRows, todayIso) {
+function renderRangeListView(rows, dates, filteredRows, todayIso, category, timeFilters) {
   const listLabel = document.getElementById("range-title");
   const status = document.getElementById("status");
   const tableContainer = document.getElementById("results");
@@ -1343,6 +1635,8 @@ function renderRangeListView(rows, dates, filteredRows, todayIso) {
     if (tableContainer) tableContainer.innerHTML = "";
     if (downloadLink) downloadLink.style.display = "none";
     if (neighbourhoodFilter) neighbourhoodFilter.style.display = "none";
+    updateResultsSummary([], filteredRows, dates, category, timeFilters, "__all__");
+    updateNeighbourhoodJump([], {});
     return;
   }
 
@@ -1367,17 +1661,24 @@ function renderRangeListView(rows, dates, filteredRows, todayIso) {
     if (status) status.textContent = message;
     if (tableContainer) tableContainer.innerHTML = "";
     if (neighbourhoodFilter) neighbourhoodFilter.style.display = "none";
+    updateResultsSummary([], filteredRows, dates, category, timeFilters, "__all__");
+    updateNeighbourhoodJump([], {});
     return;
   }
 
   const orderMap = buildDisplayOrderMap(rows, state.data.facility || []);
-  sortRows(rows, orderMap, { useDistance: state.sortByDistance });
+  sortRows(rows, orderMap, {
+    useDistance: state.sortByDistance,
+    sortMode: state.sortMode,
+  });
 
-  const applySelection = (filteredRows) => {
+  const applySelection = (selectedRows, selectedNeighbourhood = "__all__") => {
     const label = state.source === "remote" ? " (fallback data)" : "";
-    if (status) status.textContent = `Found ${filteredRows.length} sessions.${label}`;
-    if (tableContainer) renderTable(filteredRows, orderMap, tableContainer);
-    if (downloadLink) updateDownloadLink(filteredRows, orderMap, dates, downloadLink);
+    if (status) status.textContent = `Found ${selectedRows.length} sessions.${label}`;
+    if (tableContainer) renderRows(selectedRows, orderMap, tableContainer, state.viewMode);
+    if (downloadLink) updateDownloadLink(selectedRows, orderMap, dates, downloadLink);
+    updateResultsSummary(selectedRows, filteredRows, dates, category, timeFilters, selectedNeighbourhood);
+    updateNeighbourhoodJump(selectedRows, orderMap);
   };
 
   if (!neighbourhoodFilter) {
@@ -1390,8 +1691,10 @@ function renderRangeListView(rows, dates, filteredRows, todayIso) {
 async function updateView() {
   const status = document.getElementById("status");
   const calendarStatus = document.getElementById("calendar-status");
+  const summary = document.getElementById("results-summary");
   if (status) status.textContent = "Loading data...";
   if (calendarStatus) calendarStatus.textContent = "Loading data...";
+  if (summary) summary.textContent = "Loading summary...";
   closeDayModal();
   resetDragState();
 
@@ -1401,6 +1704,7 @@ async function updateView() {
     const message = `Error: ${error.message}. Try a hard refresh or the GitHub Pages site.`;
     if (status) status.textContent = message;
     if (calendarStatus) calendarStatus.textContent = message;
+    if (summary) summary.textContent = message;
     return;
   }
 
@@ -1449,11 +1753,14 @@ function openDayModal(dateIso) {
     status.textContent = "No matching sessions for this day.";
   } else {
     const orderMap = buildDisplayOrderMap(rows, state.data.facility || []);
-    sortRows(rows, orderMap, { useDistance: state.sortByDistance });
+    sortRows(rows, orderMap, {
+      useDistance: state.sortByDistance,
+      sortMode: state.sortMode,
+    });
     const applySelection = (filteredRows) => {
       const label = state.source === "remote" ? " (fallback data)" : "";
       status.textContent = `Found ${filteredRows.length} sessions.${label}`;
-      renderTable(filteredRows, orderMap, results);
+      renderRows(filteredRows, orderMap, results, state.viewMode);
       if (downloadLink) updateDownloadLink(filteredRows, orderMap, dates, downloadLink);
     };
     if (!filter) {
@@ -1667,7 +1974,15 @@ function applyTheme(theme) {
   localStorage.setItem("theme", theme);
   const toggle = document.getElementById("theme-toggle");
   if (toggle) {
-    toggle.textContent = theme === "dark" ? "Light mode" : "Dark mode";
+    if (theme === "dark") {
+      toggle.textContent = "☀️";
+      toggle.setAttribute("aria-label", "Switch to light mode");
+      toggle.setAttribute("title", "Switch to light mode");
+    } else {
+      toggle.textContent = "🌙";
+      toggle.setAttribute("aria-label", "Switch to dark mode");
+      toggle.setAttribute("title", "Switch to dark mode");
+    }
   }
 }
 
@@ -1931,6 +2246,56 @@ document.addEventListener("DOMContentLoaded", () => {
     toggle.addEventListener("click", () => {
       const current = document.documentElement.getAttribute("data-theme") || "light";
       applyTheme(current === "dark" ? "light" : "dark");
+    });
+  }
+
+  const sourceLink = document.getElementById("data-source-link");
+  if (sourceLink) {
+    sourceLink.href = SOURCE_DATA_URL;
+  }
+  updateDataFreshnessBadge();
+
+  const savedViewMode = localStorage.getItem("view-mode");
+  if (savedViewMode === VIEW_MODE_CARDS || savedViewMode === VIEW_MODE_TABLE) {
+    state.viewMode = savedViewMode;
+  }
+  syncViewModeButtons();
+
+  const viewCardsButton = document.getElementById("view-mode-cards");
+  if (viewCardsButton) {
+    viewCardsButton.addEventListener("click", () => {
+      if (state.viewMode === VIEW_MODE_CARDS) return;
+      state.viewMode = VIEW_MODE_CARDS;
+      localStorage.setItem("view-mode", state.viewMode);
+      syncViewModeButtons();
+      void updateView();
+    });
+  }
+
+  const viewTableButton = document.getElementById("view-mode-table");
+  if (viewTableButton) {
+    viewTableButton.addEventListener("click", () => {
+      if (state.viewMode === VIEW_MODE_TABLE) return;
+      state.viewMode = VIEW_MODE_TABLE;
+      localStorage.setItem("view-mode", state.viewMode);
+      syncViewModeButtons();
+      void updateView();
+    });
+  }
+
+  const sortMode = document.getElementById("results-sort-mode");
+  if (sortMode) {
+    sortMode.value = state.sortMode;
+    sortMode.addEventListener("change", () => {
+      state.sortMode = sortMode.value === "date" ? "date" : "neighbourhood";
+      void updateView();
+    });
+  }
+
+  const neighbourhoodJump = document.getElementById("neighbourhood-jump");
+  if (neighbourhoodJump) {
+    neighbourhoodJump.addEventListener("change", () => {
+      scrollToNeighbourhood(neighbourhoodJump.value);
     });
   }
 

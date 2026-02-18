@@ -9,710 +9,10 @@
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="favicon-512.png" />
     <meta name="theme-color" content="#1f5fa8" />
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
       @import url("https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap");
-      .wrapper {
-        width: 100% !important;
-        max-width: none !important;
-        margin: 0 !important;
-        padding: 0 24px;
-      }
-      .page-header {
-        max-width: none !important;
-      }
-      header {
-        display: block !important;
-        width: 100% !important;
-        float: none !important;
-        position: static !important;
-        margin: 0 0 1rem 0 !important;
-      }
-      header .view {
-        display: none !important;
-      }
-      section {
-        float: none !important;
-        width: 100% !important;
-        max-width: none !important;
-        margin-left: 0;
-      }
-      footer {
-        position: static !important;
-        float: none !important;
-        width: 100% !important;
-        max-width: none !important;
-        clear: both;
-      }
-      footer .container {
-        max-width: none !important;
-      }
-      footer p,
-      footer div,
-      footer ul {
-        max-width: none !important;
-        width: 100% !important;
-      }
-      .footer-extras {
-        display: flex;
-        flex-direction: column;
-        gap: 0.4rem;
-        margin: 0 0 0.6rem;
-      }
-      :root {
-        --bg: #f7f8fa;
-        --text: #1e1f22;
-        --muted: #5b6470;
-        --card: #ffffff;
-        --modal-bg: #ffffff;
-        --border: #e1e4e8;
-        --link: #2b5b8c;
-        --link-hover: #244b72;
-        --table-head: #f6f8fa;
-        --range-bg: #eef3fa;
-        --density-1: #f6ea41;
-        --density-2: #f4b46d;
-        --density-3: #f27e9a;
-        --density-4: #f048c6;
-      }
-      [data-theme="dark"] {
-        --bg: #0f1216;
-        --text: #e8ecf1;
-        --muted: #a9b2bf;
-        --card: #151a21;
-        --modal-bg: #151a21;
-        --border: #2a333d;
-        --link: #8db5ff;
-        --link-hover: #b1c9ff;
-        --table-head: #1b222b;
-        --range-bg: #1a2330;
-        --density-1: #f6ea41;
-        --density-2: #f4b46d;
-        --density-3: #f27e9a;
-        --density-4: #f048c6;
-      }
-      body {
-        background: var(--bg);
-        color: var(--text);
-        -webkit-overflow-scrolling: touch;
-        touch-action: pan-y;
-      }
-      body.modal-open {
-        overflow: hidden;
-      }
-      a {
-        color: var(--link);
-      }
-      a:hover {
-        color: var(--link-hover);
-      }
-      .project-links {
-        display: flex;
-        justify-content: flex-end;
-        margin: 0.5rem 0 0.75rem;
-      }
-      .project-links button {
-        padding: 0.4rem 0.7rem;
-        border-radius: 4px;
-        border: 1px solid var(--border);
-        background: var(--card);
-        color: var(--text);
-        cursor: pointer;
-      }
-      .project-links button:hover {
-        background: var(--table-head);
-      }
-      @media (max-width: 700px) {
-        .project-links {
-          justify-content: flex-start;
-        }
-      }
-      .project-footer-link {
-        margin: 0.4rem 0 0.6rem;
-      }
-      .controls {
-        margin: 0.6rem 0 1rem;
-        padding: 1rem;
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        background: var(--card);
-      }
-      .controls-top {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 1.2rem;
-        flex-wrap: wrap;
-      }
-      .selection-title {
-        font-weight: 600;
-      }
-      .selection-range {
-        font-size: 1.05rem;
-        margin-top: 0.2rem;
-      }
-      .selection-hint {
-        margin-top: 0.35rem;
-      }
-      .controls-actions {
-        display: flex;
-        gap: 0.6rem;
-        flex-wrap: wrap;
-      }
-      .controls label {
-        display: block;
-        margin-top: 0.75rem;
-        font-weight: 600;
-      }
-      .secondary-button {
-        padding: 0.35rem 0.7rem;
-        border-radius: 4px;
-        border: 1px solid var(--border);
-        background: var(--card);
-        color: var(--text);
-        cursor: pointer;
-      }
-      .secondary-button:hover {
-        background: var(--table-head);
-      }
-      .controls input[type="date"],
-      .controls input[type="text"],
-      .controls input[type="number"] {
-        width: 100%;
-        max-width: 420px;
-        padding: 0.4rem 0.5rem;
-        border-radius: 4px;
-        border: 1px solid var(--border);
-        background: var(--card);
-        color: var(--text);
-      }
-      .controls button {
-        margin-top: 0.75rem;
-        padding: 0.5rem 0.9rem;
-        border-radius: 4px;
-        border: none;
-        background: var(--link);
-        color: var(--card);
-        cursor: pointer;
-      }
-      .controls button:hover {
-        background: var(--link-hover);
-      }
-      .controls .secondary-button {
-        margin-top: 0;
-        padding: 0.35rem 0.7rem;
-        border: 1px solid var(--border);
-        background: var(--card);
-        color: var(--text);
-      }
-      .controls .secondary-button:hover {
-        background: var(--table-head);
-      }
-      .activity-filter {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.6rem 1.2rem;
-      }
-      .activity-filter label {
-        margin-top: 0.4rem;
-        font-weight: 500;
-      }
-      .time-filters {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.6rem 1.2rem;
-      }
-      .time-filters label {
-        margin-top: 0.4rem;
-        font-weight: 500;
-      }
-      .location-controls {
-        margin-top: 0.75rem;
-        display: grid;
-        gap: 0.8rem;
-      }
-      .location-row {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 0.6rem 1rem;
-      }
-      .map-actions {
-        justify-content: flex-start;
-      }
-      .inline-control {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        margin-top: 0;
-        font-weight: 500;
-      }
-      .controls label.inline-control {
-        margin-top: 0;
-        font-weight: 500;
-      }
-      .distance-control {
-        display: flex;
-        flex-direction: column;
-        gap: 0.35rem;
-        min-width: 200px;
-      }
-      .distance-control input[type="range"] {
-        width: 100%;
-      }
-      .location-map {
-        width: min(100%, 520px);
-        aspect-ratio: 4 / 3;
-        height: auto;
-        margin: 0;
-        border-radius: 12px;
-        border: 1px solid var(--border);
-        overflow: hidden;
-        background: var(--table-head);
-      }
-      .map-modal {
-        border: none;
-        border-radius: 16px;
-        padding: 0;
-        width: min(96vw, 1200px);
-        height: 90vh;
-        background: transparent;
-      }
-      .map-modal::backdrop {
-        background: rgba(0, 0, 0, 0);
-      }
-      .map-modal .modal-content {
-        height: 90vh;
-        max-height: 90vh;
-      }
-      .map-modal-body {
-        height: calc(100% - 3rem);
-      }
-      .map-modal .location-map {
-        width: 100%;
-        max-width: none;
-        height: 100%;
-        aspect-ratio: auto;
-      }
-      .location-status {
-        min-height: 1rem;
-      }
-      .hint {
-        font-weight: 400;
-        color: var(--muted);
-      }
-      .calendar-view {
-        margin-bottom: 1.5rem;
-      }
-      .calendar-card {
-        padding: 1rem;
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        background: var(--card);
-      }
-      .calendar-toolbar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.8rem;
-        flex-wrap: wrap;
-        margin-bottom: 0.75rem;
-      }
-      .month-label {
-        font-weight: 600;
-        font-size: 1.1rem;
-      }
-      .calendar-weekdays {
-        display: grid;
-        grid-template-columns: repeat(7, minmax(0, 1fr));
-        gap: 0.4rem;
-        margin-bottom: 0.4rem;
-        font-size: 0.8rem;
-        color: var(--muted);
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-      }
-      .calendar-weekdays div {
-        text-align: center;
-      }
-      .calendar-grid {
-        display: grid;
-        grid-template-columns: repeat(7, minmax(0, 1fr));
-        gap: 0.4rem;
-        user-select: none;
-        touch-action: pan-y;
-      }
-      .calendar-day {
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        background: var(--card);
-        appearance: none;
-        min-height: 84px;
-        padding: 0.45rem;
-        text-align: left;
-        display: flex;
-        flex-direction: column;
-        gap: 0.35rem;
-        position: relative;
-        cursor: pointer;
-        color: inherit;
-        font-family: inherit;
-      }
-      .calendar-day:focus-visible {
-        outline: 2px solid var(--link);
-        outline-offset: 2px;
-      }
-      .calendar-day:hover {
-        border-color: var(--link);
-      }
-      .calendar-day.is-selected {
-        box-shadow: inset 0 0 0 2px var(--link);
-        background: var(--range-bg);
-      }
-      .calendar-day.is-preview {
-        box-shadow: inset 0 0 0 2px var(--link);
-        border-style: dashed;
-      }
-      .calendar-day.is-today::after {
-        content: "";
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: var(--link);
-        position: absolute;
-        top: 8px;
-        right: 8px;
-      }
-      .calendar-day.outside-month {
-        color: var(--muted);
-        background: var(--bg);
-      }
-      .calendar-day.outside-month.is-selected {
-        color: var(--text);
-        background: var(--range-bg);
-      }
-      .calendar-day.outside-month.is-selected.density-1 {
-        background: var(--density-1);
-      }
-      .calendar-day.outside-month.is-selected.density-2 {
-        background: var(--density-2);
-      }
-      .calendar-day.outside-month.is-selected.density-3 {
-        background: var(--density-3);
-      }
-      .calendar-day.outside-month.is-selected.density-4 {
-        background: var(--density-4);
-      }
-      .calendar-day.density-1 {
-        background: var(--density-1);
-        border-color: transparent;
-      }
-      .calendar-day.density-2 {
-        background: var(--density-2);
-        border-color: transparent;
-      }
-      .calendar-day.density-3 {
-        background: var(--density-3);
-        border-color: transparent;
-      }
-      .calendar-day.density-1,
-      .calendar-day.density-2,
-      .calendar-day.density-3 {
-        color: #1e1f22;
-      }
-      .calendar-day.density-1 .session-count,
-      .calendar-day.density-2 .session-count,
-      .calendar-day.density-3 .session-count {
-        color: rgba(30, 31, 34, 0.7);
-      }
-      .calendar-day.density-4 {
-        background: var(--density-4);
-        border-color: transparent;
-        color: #ffffff;
-      }
-      .calendar-day.density-4 .session-count {
-        color: rgba(255, 255, 255, 0.9);
-      }
-      .day-number {
-        font-weight: 600;
-        font-size: 0.95rem;
-      }
-      .session-count {
-        font-size: 0.78rem;
-        color: var(--muted);
-      }
-      .calendar-legend {
-        display: flex;
-        gap: 0.8rem;
-        flex-wrap: wrap;
-        margin-top: 0.6rem;
-        font-size: 0.85rem;
-        color: var(--muted);
-        align-items: center;
-      }
-      .legend-item {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-      }
-      .legend-swatch {
-        width: 16px;
-        height: 10px;
-        border-radius: 999px;
-        display: inline-block;
-      }
-      .legend-swatch.density-1 {
-        background: var(--density-1);
-      }
-      .legend-swatch.density-2 {
-        background: var(--density-2);
-      }
-      .legend-swatch.density-3 {
-        background: var(--density-3);
-      }
-      .legend-swatch.density-4 {
-        background: var(--density-4);
-      }
-      .calendar-status {
-        margin-top: 0.6rem;
-        color: var(--muted);
-      }
-      .calendar-actions {
-        display: flex;
-        justify-content: flex-end;
-        margin-top: 0.6rem;
-      }
-      .filter-title {
-        font-weight: 600;
-        margin-bottom: 0.4rem;
-      }
-      .neighbourhood-filter-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-      }
-      .filter-chip {
-        border: 1px solid var(--border);
-        background: var(--card);
-        color: var(--text);
-        padding: 0.35rem 0.7rem;
-        border-radius: 999px;
-        font-size: 0.9rem;
-        cursor: pointer;
-      }
-      .filter-chip.active {
-        background: var(--link);
-        color: var(--card);
-        border-color: var(--link);
-      }
-      .list-header {
-        display: flex;
-        align-items: center;
-        gap: 0.8rem;
-        flex-wrap: wrap;
-        margin: 1rem 0 0.6rem;
-      }
-      .list-view {
-        margin-top: 1.5rem;
-        padding: 1rem;
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        background: var(--card);
-      }
-      .day-modal {
-        border: none;
-        border-radius: 16px;
-        padding: 0;
-        width: min(98vw, 1400px);
-        background: transparent;
-      }
-      .day-modal::backdrop {
-        background: rgba(0, 0, 0, 0);
-      }
-      .modal-content {
-        background: var(--card);
-        color: var(--text);
-        border-radius: 16px;
-        border: 1px solid var(--border);
-        padding: 1rem 1.2rem 1.2rem;
-        width: 100%;
-        box-sizing: border-box;
-        max-height: 80vh;
-        overflow: auto;
-      }
-      .day-modal .modal-content {
-        background: var(--modal-bg);
-      }
-      .modal-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        margin-bottom: 0.6rem;
-      }
-      .modal-title {
-        font-weight: 700;
-        font-size: 1.05rem;
-      }
-      .modal-status {
-        margin-top: 0.35rem;
-        color: var(--muted);
-      }
-      #modal-download {
-        display: inline-block;
-        margin-top: 0.5rem;
-        font-weight: 600;
-      }
-      #modal-results .results-table {
-        margin-bottom: 0;
-      }
-      .list-date-label {
-        font-weight: 600;
-        font-size: 1.1rem;
-      }
-      #status {
-        margin-top: 0.5rem;
-      }
-      #download {
-        display: inline-block;
-        margin-top: 0.5rem;
-        font-weight: 600;
-      }
-      .results-table {
-        width: 100%;
-        table-layout: fixed;
-        border-collapse: collapse;
-        margin-bottom: 1.5rem;
-        -webkit-user-select: none;
-        user-select: none;
-        -webkit-touch-callout: none;
-        touch-action: pan-y;
-      }
-      .results-table th,
-      .results-table td {
-        border-bottom: 1px solid var(--border);
-        padding: 0.35rem 0.5rem;
-        vertical-align: top;
-        word-break: normal;
-        color: var(--text);
-      }
-      .results-table th {
-        background: var(--table-head);
-        font-weight: 600;
-      }
-      .results-table th:nth-child(1),
-      .results-table td:nth-child(1) {
-        width: 200px;
-        white-space: normal;
-      }
-      .results-table th:nth-child(2),
-      .results-table td:nth-child(2),
-      .results-table th:nth-child(3),
-      .results-table td:nth-child(3) {
-        width: 70px;
-        white-space: nowrap;
-      }
-      .results-table th:nth-child(4),
-      .results-table td:nth-child(4) {
-        width: 120px;
-        white-space: nowrap;
-      }
-      .results-table th:nth-child(5),
-      .results-table td:nth-child(5) {
-        width: 180px;
-      }
-      .results-table th:nth-child(6),
-      .results-table td:nth-child(6) {
-        width: 220px;
-      }
-      .results-table th:nth-child(7),
-      .results-table td:nth-child(7) {
-        width: auto;
-        overflow-wrap: anywhere;
-      }
-      .neighbourhood-title {
-        margin-top: 1.5rem;
-        color: var(--text);
-      }
-      .ad-inline {
-        margin: 1rem 0 0.5rem;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        color: var(--muted);
-        font-size: 0.95rem;
-      }
-      .ad-inline img {
-        width: 18px;
-        height: 18px;
-      }
-      @media (max-width: 700px) {
-        .wrapper {
-          padding: 0 12px;
-        }
-        .controls-top {
-          flex-direction: column;
-          align-items: stretch;
-        }
-        .controls-actions {
-          width: 100%;
-        }
-        .activity-filter,
-        .time-filters,
-        .neighbourhood-filter-list {
-          flex-direction: column;
-          align-items: flex-start;
-        }
-        .calendar-day {
-          min-height: 70px;
-          padding: 0.35rem;
-        }
-        .calendar-weekdays {
-          font-size: 0.7rem;
-        }
-        .list-header {
-          flex-direction: column;
-          align-items: flex-start;
-        }
-        .results-table {
-          table-layout: auto;
-        }
-        .results-table thead {
-          display: none;
-        }
-        .results-table,
-        .results-table tbody,
-        .results-table tr,
-        .results-table td {
-          display: block;
-          width: 100%;
-        }
-        .results-table tr {
-          margin-bottom: 1rem;
-          border: 1px solid var(--border);
-          border-radius: 6px;
-          padding: 0.4rem 0.5rem;
-          background: var(--card);
-        }
-        .results-table td {
-          display: flex;
-          gap: 0.6rem;
-          padding: 0.35rem 0;
-          border-bottom: 1px solid var(--border);
-        }
-        .results-table td:last-child {
-          border-bottom: none;
-        }
-        .results-table td::before {
-          content: attr(data-label);
-          font-weight: 600;
-          width: 120px;
-          flex: 0 0 auto;
-        }
-      }
+
       :root {
         --bg: #eef3f9;
         --bg-alt: #f7f1e7;
@@ -730,6 +30,7 @@
         --density-3: #f27e9a;
         --density-4: #f048c6;
       }
+
       [data-theme="dark"] {
         --bg: #0b1118;
         --bg-alt: #141c27;
@@ -742,68 +43,906 @@
         --link-hover: #b7d7ff;
         --table-head: rgba(148, 163, 184, 0.12);
         --range-bg: #1c2d42;
-        --density-1: #f6ea41;
-        --density-2: #f4b46d;
-        --density-3: #f27e9a;
-        --density-4: #f048c6;
       }
+
+      * {
+        box-sizing: border-box;
+      }
+
       body {
+        margin: 0;
         font-family: "Atkinson Hyperlegible", "Verdana", "Trebuchet MS", "Segoe UI", sans-serif;
         color: var(--text);
         background:
           radial-gradient(1200px circle at 10% -10%, rgba(156, 198, 255, 0.55), transparent 55%),
           radial-gradient(900px circle at 90% -20%, rgba(196, 208, 230, 0.45), transparent 50%),
           linear-gradient(180deg, #f8fbff 0%, var(--bg) 60%, var(--bg-alt) 100%);
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
       }
-      [data-theme="dark"] body {
-        background:
-          radial-gradient(1200px circle at 10% -10%, rgba(83, 118, 175, 0.35), transparent 55%),
-          radial-gradient(900px circle at 90% -20%, rgba(60, 80, 110, 0.3), transparent 50%),
-          linear-gradient(180deg, #0b1118 0%, #101824 60%, #141c27 100%);
+
+      body.modal-open {
+        overflow: hidden;
       }
+
+      a {
+        color: var(--link);
+      }
+
+      a:hover {
+        color: var(--link-hover);
+      }
+
+      .page-shell {
+        max-width: 1380px;
+        margin: 0 auto;
+        padding: 1.1rem 1rem 1.75rem;
+      }
+
+      .page-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .hero-title {
+        margin: 0;
+        font-size: clamp(1.5rem, 3vw, 2.2rem);
+        line-height: 1.1;
+      }
+
+      .hero-subtitle {
+        margin: 0.35rem 0 0;
+        color: var(--muted);
+        font-size: 1rem;
+      }
+
+      .hero-meta {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.55rem;
+      }
+
+      .meta-badge {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--card);
+        color: var(--muted);
+        padding: 0.22rem 0.65rem;
+        font-size: 0.84rem;
+      }
+
+      .project-links {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+      }
+
+      .project-footer-link {
+        margin: 0.4rem 0 0.6rem;
+      }
+
+      .footer-extras {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        margin: 0 0 0.6rem;
+      }
+
+      .ad-inline {
+        margin: 1rem 0 0.5rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      .ad-inline img {
+        width: 18px;
+        height: 18px;
+      }
+
+      .app-layout {
+        display: grid;
+        grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+        gap: 1rem;
+        align-items: start;
+      }
+
       .controls,
-      .calendar-card,
-      .list-view {
+      .panel {
+        border: 1px solid var(--border);
         border-radius: 16px;
+        background: var(--card);
         box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
         backdrop-filter: blur(8px);
-        animation: liftIn 0.45s ease-out both;
       }
-      .calendar-card {
-        animation-delay: 0.05s;
+
+      .controls {
+        padding: 1rem;
       }
-      .list-view {
-        animation-delay: 0.08s;
+
+      .controls-panel {
+        position: sticky;
+        top: 0.8rem;
       }
-      .secondary-button,
-      .controls button {
+
+      .controls-top {
+        margin-bottom: 0.95rem;
+      }
+
+      .selection-title {
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+
+      .selection-range {
+        margin-top: 0.22rem;
+        font-size: 1.04rem;
+      }
+
+      .selection-hint {
+        margin-top: 0.34rem;
+      }
+
+      .controls-section + .controls-section {
+        margin-top: 0.86rem;
+        padding-top: 0.86rem;
+        border-top: 1px solid var(--border);
+      }
+
+      .section-label {
+        display: block;
+        margin: 0;
+        font-weight: 700;
+        font-size: 0.95rem;
+      }
+
+      .section-label + .hint {
+        margin-top: 0.2rem;
+      }
+
+      .hint {
+        font-weight: 400;
+        color: var(--muted);
+      }
+
+      .activity-filter,
+      .time-filters {
+        margin-top: 0.48rem;
+        display: grid;
+        gap: 0.4rem;
+      }
+
+      .activity-filter label,
+      .time-filters label {
+        margin: 0;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        font-weight: 500;
+      }
+
+      .location-controls {
+        margin-top: 0.55rem;
+        display: grid;
+        gap: 0.62rem;
+      }
+
+      .location-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.55rem 0.8rem;
+      }
+
+      .inline-control {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin: 0;
+        font-weight: 500;
+      }
+
+      .distance-control {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        min-width: 200px;
+      }
+
+      .distance-control input[type="range"] {
+        width: 100%;
+      }
+
+      .location-map {
+        width: min(100%, 520px);
+        aspect-ratio: 4 / 3;
+        height: auto;
+        margin: 0;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        overflow: hidden;
+        background: var(--table-head);
+      }
+
+      .location-status {
+        min-height: 1rem;
+      }
+
+      .privacy-note {
+        margin-top: 0.5rem;
+        font-size: 0.84rem;
+      }
+
+      .secondary-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.4rem 0.8rem;
         border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        color: var(--text);
+        cursor: pointer;
+        text-decoration: none;
       }
+
+      .secondary-button:hover {
+        background: var(--table-head);
+      }
+
+      .controls button {
+        margin-top: 0;
+      }
+
+      .content-panel {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .panel {
+        padding: 1rem;
+        animation: liftIn 0.4s ease-out both;
+      }
+
+      .calendar-view {
+        margin: 0;
+      }
+
+      .calendar-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.8rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.75rem;
+      }
+
+      .month-label {
+        font-weight: 700;
+        font-size: 1.08rem;
+      }
+
+      .calendar-weekdays {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 0.4rem;
+        margin-bottom: 0.4rem;
+        font-size: 0.76rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-weight: 700;
+      }
+
+      .calendar-weekdays div {
+        text-align: center;
+      }
+
+      .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 0.4rem;
+        user-select: none;
+        touch-action: pan-y;
+      }
+
       .calendar-day {
+        border: 1px solid var(--border);
         border-radius: 14px;
+        background: var(--card);
+        appearance: none;
+        min-height: 84px;
+        padding: 0.45rem;
+        text-align: left;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        position: relative;
+        cursor: pointer;
+        color: inherit;
+        font-family: inherit;
         transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
       }
+
+      .calendar-day:focus-visible {
+        outline: 2px solid var(--link);
+        outline-offset: 2px;
+      }
+
       .calendar-day:hover {
+        border-color: var(--link);
         transform: translateY(-2px);
         box-shadow: 0 10px 20px rgba(15, 23, 42, 0.15);
       }
+
+      .calendar-day.is-selected {
+        box-shadow: inset 0 0 0 2px var(--link);
+        background: var(--range-bg);
+      }
+
+      .calendar-day.is-preview {
+        box-shadow: inset 0 0 0 2px var(--link);
+        border-style: dashed;
+      }
+
+      .calendar-day.is-today::after {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--link);
+        position: absolute;
+        top: 8px;
+        right: 8px;
+      }
+
+      .calendar-day.outside-month {
+        color: var(--muted);
+        background: var(--bg);
+      }
+
+      .calendar-day.outside-month.is-selected {
+        color: var(--text);
+        background: var(--range-bg);
+      }
+
+      .calendar-day.outside-month.is-selected.density-1 {
+        background: var(--density-1);
+      }
+
+      .calendar-day.outside-month.is-selected.density-2 {
+        background: var(--density-2);
+      }
+
+      .calendar-day.outside-month.is-selected.density-3 {
+        background: var(--density-3);
+      }
+
+      .calendar-day.outside-month.is-selected.density-4 {
+        background: var(--density-4);
+      }
+
+      .calendar-day.density-1 {
+        background: var(--density-1);
+        border-color: transparent;
+      }
+
+      .calendar-day.density-2 {
+        background: var(--density-2);
+        border-color: transparent;
+      }
+
+      .calendar-day.density-3 {
+        background: var(--density-3);
+        border-color: transparent;
+      }
+
       .calendar-day.density-4 {
+        background: var(--density-4);
+        border-color: transparent;
         color: #f7fbff;
       }
-      .calendar-weekdays {
-        font-weight: 600;
-        letter-spacing: 0.12em;
+
+      .calendar-day.density-1,
+      .calendar-day.density-2,
+      .calendar-day.density-3 {
+        color: #1e1f22;
       }
+
+      .calendar-day.density-1 .session-count,
+      .calendar-day.density-2 .session-count,
+      .calendar-day.density-3 .session-count {
+        color: rgba(30, 31, 34, 0.75);
+      }
+
+      .calendar-day.density-4 .session-count {
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .day-number {
+        font-weight: 700;
+        font-size: 0.95rem;
+      }
+
+      .session-count {
+        font-size: 0.78rem;
+        color: var(--muted);
+      }
+
       .calendar-legend {
+        display: flex;
+        gap: 0.8rem;
+        flex-wrap: wrap;
+        margin-top: 0.65rem;
+        font-size: 0.73rem;
+        color: var(--muted);
+        align-items: center;
         text-transform: uppercase;
         letter-spacing: 0.08em;
-        font-size: 0.72rem;
       }
+
+      .legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+
+      .legend-swatch {
+        width: 16px;
+        height: 10px;
+        border-radius: 999px;
+        display: inline-block;
+      }
+
+      .legend-swatch.density-1 {
+        background: var(--density-1);
+      }
+
+      .legend-swatch.density-2 {
+        background: var(--density-2);
+      }
+
+      .legend-swatch.density-3 {
+        background: var(--density-3);
+      }
+
+      .legend-swatch.density-4 {
+        background: var(--density-4);
+      }
+
+      .calendar-status {
+        margin-top: 0.6rem;
+        color: var(--muted);
+      }
+
+      .calendar-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 0.6rem;
+      }
+
+      .list-view {
+        margin-top: 0;
+      }
+
+      .results-summary {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--table-head);
+        padding: 0.6rem 0.8rem;
+        margin-bottom: 0.75rem;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .list-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.6rem;
+      }
+
+      .list-date-label {
+        font-weight: 700;
+        font-size: 1.12rem;
+      }
+
+      .status-line {
+        margin-top: 0.28rem;
+        color: var(--muted);
+      }
+
+      #download {
+        display: inline-block;
+        margin-top: 0.2rem;
+        font-weight: 700;
+      }
+
+      .results-toolbar {
+        position: sticky;
+        top: 0.45rem;
+        z-index: 4;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.7rem;
+        align-items: center;
+        margin-bottom: 0.75rem;
+        padding: 0.55rem;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--card);
+      }
+
+      .view-mode-toggle {
+        display: inline-flex;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        overflow: hidden;
+      }
+
+      .view-mode-button {
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        padding: 0.35rem 0.8rem;
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      .view-mode-button.is-active {
+        background: var(--link);
+        color: #fff;
+      }
+
+      .toolbar-field {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.88rem;
+        color: var(--muted);
+      }
+
+      .toolbar-field select {
+        border: 1px solid var(--border);
+        background: var(--card);
+        color: var(--text);
+        padding: 0.34rem 0.5rem;
+        border-radius: 8px;
+      }
+
+      .subfilter {
+        margin: 0.6rem 0 0.8rem;
+        padding: 0.75rem;
+      }
+
+      .filter-title {
+        font-weight: 700;
+        margin-bottom: 0.45rem;
+      }
+
+      .neighbourhood-filter-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .filter-chip {
+        border: 1px solid var(--border);
+        background: var(--card);
+        color: var(--text);
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+
+      .filter-chip.active {
+        background: var(--link);
+        color: #fff;
+        border-color: var(--link);
+      }
+
+      .neighbourhood-title {
+        margin: 1.2rem 0 0.6rem;
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text);
+      }
+
+      .results-table {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse;
+        margin-bottom: 1.2rem;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+        touch-action: pan-y;
+      }
+
+      .results-table th,
+      .results-table td {
+        border-bottom: 1px solid var(--border);
+        padding: 0.35rem 0.5rem;
+        vertical-align: top;
+        word-break: normal;
+        color: var(--text);
+      }
+
+      .results-table th {
+        background: var(--table-head);
+        font-weight: 700;
+      }
+
+      .results-table th:nth-child(1),
+      .results-table td:nth-child(1) {
+        width: 200px;
+      }
+
+      .results-table th:nth-child(2),
+      .results-table td:nth-child(2),
+      .results-table th:nth-child(3),
+      .results-table td:nth-child(3) {
+        width: 70px;
+        white-space: nowrap;
+      }
+
+      .results-table th:nth-child(4),
+      .results-table td:nth-child(4) {
+        width: 120px;
+        white-space: nowrap;
+      }
+
+      .results-table th:nth-child(5),
+      .results-table td:nth-child(5) {
+        width: 180px;
+      }
+
+      .results-table th:nth-child(6),
+      .results-table td:nth-child(6) {
+        width: 220px;
+      }
+
+      .results-table th:nth-child(7),
+      .results-table td:nth-child(7) {
+        width: auto;
+        overflow-wrap: anywhere;
+      }
+
+      .results-cards {
+        display: grid;
+        gap: 0.7rem;
+        margin-bottom: 1.2rem;
+      }
+
+      .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 0.7rem;
+      }
+
+      .session-card {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 0.65rem;
+        background: var(--card);
+      }
+
+      .session-card h4 {
+        margin: 0;
+        font-size: 0.95rem;
+      }
+
+      .session-card .address {
+        margin-top: 0.2rem;
+        font-size: 0.84rem;
+        color: var(--muted);
+      }
+
+      .session-list {
+        margin: 0.55rem 0 0;
+        padding-left: 1rem;
+        display: grid;
+        gap: 0.3rem;
+      }
+
+      .session-list li {
+        font-size: 0.83rem;
+        color: var(--text);
+      }
+
+      .day-modal {
+        border: none;
+        border-radius: 16px;
+        padding: 0;
+        width: min(98vw, 1400px);
+        background: transparent;
+      }
+
+      .day-modal::backdrop {
+        background: rgba(0, 0, 0, 0);
+      }
+
+      .modal-content {
+        background: var(--card);
+        color: var(--text);
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        padding: 1rem 1.2rem 1.2rem;
+        width: 100%;
+        box-sizing: border-box;
+        max-height: 80vh;
+        overflow: auto;
+      }
+
+      .day-modal .modal-content {
+        background: var(--modal-bg);
+      }
+
+      .modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 0.6rem;
+      }
+
+      .modal-title {
+        font-weight: 700;
+        font-size: 1.05rem;
+      }
+
+      .modal-status {
+        margin-top: 0.35rem;
+        color: var(--muted);
+      }
+
+      #modal-download {
+        display: inline-block;
+        margin-top: 0.5rem;
+        font-weight: 700;
+      }
+
+      #modal-results .results-table {
+        margin-bottom: 0;
+      }
+
+      .map-modal {
+        border: none;
+        border-radius: 16px;
+        padding: 0;
+        width: min(96vw, 1200px);
+        height: 90vh;
+        background: transparent;
+      }
+
+      .map-modal::backdrop {
+        background: rgba(0, 0, 0, 0);
+      }
+
+      .map-modal .modal-content {
+        height: 90vh;
+        max-height: 90vh;
+      }
+
+      .map-modal-body {
+        height: calc(100% - 3rem);
+      }
+
+      .map-modal .location-map {
+        width: 100%;
+        max-width: none;
+        height: 100%;
+        aspect-ratio: auto;
+      }
+
+      @media (max-width: 1080px) {
+        .app-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .controls-panel {
+          position: static;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .page-shell {
+          padding: 0.9rem 0.65rem 1.2rem;
+        }
+
+        .page-header {
+          flex-direction: column;
+        }
+
+        .project-links {
+          width: 100%;
+          justify-content: flex-start;
+          flex-wrap: wrap;
+        }
+
+        .results-toolbar {
+          position: static;
+        }
+
+        .toolbar-field {
+          width: 100%;
+          justify-content: space-between;
+        }
+
+        .toolbar-field select {
+          width: 60%;
+        }
+
+        .calendar-day {
+          min-height: 70px;
+          padding: 0.35rem;
+        }
+
+        .calendar-weekdays {
+          font-size: 0.68rem;
+        }
+
+        .results-table {
+          table-layout: auto;
+        }
+
+        .results-table thead {
+          display: none;
+        }
+
+        .results-table,
+        .results-table tbody,
+        .results-table tr,
+        .results-table td {
+          display: block;
+          width: 100%;
+        }
+
+        .results-table tr {
+          margin-bottom: 1rem;
+          border: 1px solid var(--border);
+          border-radius: 6px;
+          padding: 0.4rem 0.5rem;
+          background: var(--card);
+        }
+
+        .results-table td {
+          display: flex;
+          gap: 0.6rem;
+          padding: 0.35rem 0;
+          border-bottom: 1px solid var(--border);
+        }
+
+        .results-table td:last-child {
+          border-bottom: none;
+        }
+
+        .results-table td::before {
+          content: attr(data-label);
+          font-weight: 700;
+          width: 120px;
+          flex: 0 0 auto;
+        }
+      }
+
       @keyframes liftIn {
         from {
           opacity: 0;
           transform: translateY(12px);
         }
+
         to {
           opacity: 1;
           transform: translateY(0);
@@ -812,99 +951,156 @@
     </style>
   </head>
   <body>
-    <div class="project-links">
-      <button id="theme-toggle" type="button">Dark mode</button>
-    </div>
-
-    <div class="controls">
-      <div class="controls-top">
-        <div>
-        <div class="selection-title">Selected dates</div>
-        <div id="selection-range" class="selection-range"></div>
-        <div class="selection-hint hint">
-          Drag across days to select a range. Results update below the calendar.
-        </div>
-      </div>
-    </div>
-
-      <label>Activity type</label>
-      <div class="activity-filter">
-        <label><input type="radio" name="activity-filter" value="skating" checked /> Skating</label>
-        <label><input type="radio" name="activity-filter" value="adult-hockey" /> Adult hockey (18+)</label>
-        <label><input type="radio" name="activity-filter" value="youth-hockey" /> Youth hockey</label>
-      </div>
-
-        <label>Time of day <span class="hint">(all timeslots by default)</span></label>
-        <div class="time-filters">
-          <label><input type="checkbox" name="time-filter" value="morning" /> Morning (before noon)</label>
-          <label><input type="checkbox" name="time-filter" value="afternoon" /> Afternoon (noon - 6pm)</label>
-          <label><input type="checkbox" name="time-filter" value="evening" /> Evening (after 6pm)</label>
-        </div>
-
-        <label>Location filter <span class="hint">(local only, nothing saved to a server)</span></label>
-        <div class="location-controls">
-          <div class="location-row map-actions">
-            <button id="use-location" class="secondary-button" type="button">Use my location</button>
-            <button id="expand-map" class="secondary-button" type="button">Expand map</button>
+    <div class="page-shell">
+      <header class="page-header">
+        <div class="hero-copy">
+          <h1 class="hero-title">Explore Ottawa Drop-in Ice</h1>
+          <p class="hero-subtitle">
+            Browse drop-in skating and hockey by date, neighbourhood, and distance.
+          </p>
+          <div class="hero-meta">
+            <span id="data-freshness" class="meta-badge">Updated from ottrec feed: loading...</span>
+            <a id="data-source-link" href="https://data.ottrec.ca/export/latest.json" target="_blank" rel="noopener"
+              >Data source</a
+            >
           </div>
-          <div id="location-status" class="hint location-status"></div>
-          <div id="location-map-wrapper">
-            <div class="location-map" id="location-map"></div>
-          </div>
-          <div class="hint">Click the map to set a custom location.</div>
-          <div class="location-row">
-            <div class="distance-control">
-              <div>Max distance: <span id="distance-value">No limit</span></div>
-              <input id="distance-range" type="range" min="1" max="50" value="15" />
-              <div class="hint">Slide to the end for no limit.</div>
+        </div>
+        <div class="project-links">
+          <button id="theme-toggle" class="secondary-button" type="button" aria-label="Switch to dark mode" title="Switch to dark mode">🌙</button>
+          <a
+            class="secondary-button"
+            href="https://github.com/chrisbuchanpham/ottawa_dropin_skating"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+        </div>
+      </header>
+
+      <div class="app-layout">
+        <aside class="controls controls-panel">
+          <div class="controls-top">
+            <div class="selection-title">Selected dates</div>
+            <div id="selection-range" class="selection-range"></div>
+            <div class="selection-hint hint">
+              Drag across days to select a range. Click a day in a range for quick details.
             </div>
-            <label class="inline-control">
-              <input type="checkbox" id="sort-distance" />
-              Sort neighbourhoods by nearest
-            </label>
           </div>
-        </div>
-      </div>
 
-    <div id="calendar-view" class="calendar-view">
-      <div class="calendar-card">
-        <div class="calendar-toolbar">
-          <button id="prev-month" class="secondary-button" type="button">Previous</button>
-          <div id="month-label" class="month-label"></div>
-          <button id="next-month" class="secondary-button" type="button">Next</button>
-        </div>
-        <div class="calendar-weekdays">
-          <div>Mon</div>
-          <div>Tue</div>
-          <div>Wed</div>
-          <div>Thu</div>
-          <div>Fri</div>
-          <div>Sat</div>
-          <div>Sun</div>
-        </div>
-        <div id="calendar-grid" class="calendar-grid"></div>
-        <div class="calendar-legend">
-          <span class="legend-item"><span class="legend-swatch density-1"></span> Few sessions</span>
-          <span class="legend-item"><span class="legend-swatch density-2"></span> Some sessions</span>
-          <span class="legend-item"><span class="legend-swatch density-3"></span> More sessions</span>
-          <span class="legend-item"><span class="legend-swatch density-4"></span> Most sessions</span>
-        </div>
-        <div id="calendar-status" class="calendar-status"></div>
-        <div class="calendar-actions">
-          <button id="reset-selection" class="secondary-button" type="button">Reset selection</button>
-        </div>
-      </div>
-    </div>
+          <div class="controls-section">
+            <label class="section-label">Activity type</label>
+            <div class="activity-filter">
+              <label><input type="radio" name="activity-filter" value="skating" checked /> Skating</label>
+              <label><input type="radio" name="activity-filter" value="adult-hockey" /> Adult hockey (18+)</label>
+              <label><input type="radio" name="activity-filter" value="youth-hockey" /> Youth hockey</label>
+            </div>
+          </div>
 
-    <div class="list-view">
-      <div class="list-header">
-        <div id="range-title" class="list-date-label"></div>
-      </div>
+          <div class="controls-section">
+            <label class="section-label">Time of day</label>
+            <div class="hint">(all timeslots by default)</div>
+            <div class="time-filters">
+              <label><input type="checkbox" name="time-filter" value="morning" /> Morning (before noon)</label>
+              <label><input type="checkbox" name="time-filter" value="afternoon" /> Afternoon (noon - 6pm)</label>
+              <label><input type="checkbox" name="time-filter" value="evening" /> Evening (after 6pm)</label>
+            </div>
+          </div>
 
-      <div id="status"></div>
-      <a id="download" href="#" style="display: none">Download CSV</a>
-      <div id="neighbourhood-filter" class="controls" style="display: none"></div>
-      <div id="results"></div>
+          <div class="controls-section">
+            <label class="section-label">Location filter</label>
+            <div class="location-controls">
+              <div class="location-row">
+                <button id="use-location" class="secondary-button" type="button">Use my location</button>
+                <button id="expand-map" class="secondary-button" type="button">Expand map</button>
+              </div>
+              <div id="location-status" class="hint location-status"></div>
+              <div id="location-map-wrapper">
+                <div class="location-map" id="location-map"></div>
+              </div>
+              <div class="hint">Click the map to set a custom location.</div>
+              <div class="location-row">
+                <div class="distance-control">
+                  <div>Max distance: <span id="distance-value">No limit</span></div>
+                  <input id="distance-range" type="range" min="1" max="50" value="15" />
+                  <div class="hint">Slide to the end for no limit.</div>
+                </div>
+                <label class="inline-control">
+                  <input type="checkbox" id="sort-distance" />
+                  Sort neighbourhoods by nearest
+                </label>
+              </div>
+              <div class="privacy-note hint">Location stays in your browser. Nothing is saved to a server.</div>
+            </div>
+          </div>
+        </aside>
+
+        <main class="content-panel">
+          <section id="calendar-view" class="calendar-view panel">
+            <div class="calendar-toolbar">
+              <button id="prev-month" class="secondary-button" type="button">Previous</button>
+              <div id="month-label" class="month-label"></div>
+              <button id="next-month" class="secondary-button" type="button">Next</button>
+            </div>
+            <div class="calendar-weekdays">
+              <div>Mon</div>
+              <div>Tue</div>
+              <div>Wed</div>
+              <div>Thu</div>
+              <div>Fri</div>
+              <div>Sat</div>
+              <div>Sun</div>
+            </div>
+            <div id="calendar-grid" class="calendar-grid"></div>
+            <div class="calendar-legend">
+              <span class="legend-item"><span class="legend-swatch density-1"></span> Few sessions</span>
+              <span class="legend-item"><span class="legend-swatch density-2"></span> Some sessions</span>
+              <span class="legend-item"><span class="legend-swatch density-3"></span> More sessions</span>
+              <span class="legend-item"><span class="legend-swatch density-4"></span> Most sessions</span>
+            </div>
+            <div id="calendar-status" class="calendar-status"></div>
+            <div class="calendar-actions">
+              <button id="reset-selection" class="secondary-button" type="button">Reset selection</button>
+            </div>
+          </section>
+
+          <section class="list-view panel">
+            <div id="results-summary" class="results-summary">Loading summary...</div>
+
+            <div class="list-header">
+              <div>
+                <div id="range-title" class="list-date-label"></div>
+                <div id="status" class="status-line"></div>
+              </div>
+              <a id="download" href="#" style="display: none">Download CSV</a>
+            </div>
+
+            <div class="results-toolbar">
+              <div class="view-mode-toggle" role="group" aria-label="Result view mode">
+                <button id="view-mode-cards" class="view-mode-button is-active" type="button">
+                  Grouped cards
+                </button>
+                <button id="view-mode-table" class="view-mode-button" type="button">Table</button>
+              </div>
+              <label class="toolbar-field">
+                Sort
+                <select id="results-sort-mode">
+                  <option value="neighbourhood" selected>Neighbourhood</option>
+                  <option value="date">Date then time</option>
+                </select>
+              </label>
+              <label class="toolbar-field">
+                Jump to neighbourhood
+                <select id="neighbourhood-jump">
+                  <option value="">Select...</option>
+                </select>
+              </label>
+            </div>
+
+            <div id="neighbourhood-filter" class="controls subfilter" style="display: none"></div>
+            <div id="results"></div>
+          </section>
+        </main>
+      </div>
     </div>
 
     <dialog id="day-modal" class="day-modal">
@@ -915,7 +1111,7 @@
         </div>
         <div id="modal-status" class="modal-status"></div>
         <a id="modal-download" href="#" style="display: none">Download CSV</a>
-        <div id="modal-neighbourhood-filter" class="controls" style="display: none"></div>
+        <div id="modal-neighbourhood-filter" class="controls subfilter" style="display: none"></div>
         <div id="modal-results"></div>
       </div>
     </dialog>
